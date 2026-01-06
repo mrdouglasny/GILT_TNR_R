@@ -25,3 +25,4 @@ nohup.out
 **_tmp.md
 **_tmp.ipynb
 
+__pycache__/
