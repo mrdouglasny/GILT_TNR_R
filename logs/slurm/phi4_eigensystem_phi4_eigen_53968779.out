@@ -1,0 +1,52 @@
+==========================================
+Job ID: 53968779
+Job Name: phi4_eigen
+Node: holy7c24402
+Config: mu_120
+Started: Fri Jan  2 11:10:23 EST 2026
+==========================================
+Working directory: /n/home00/mdouglas/rg
+Julia version:
+julia version 1.12.3
+Using config: ekrgilttrnr/configs/phi4_eigensystem/mu_120.toml
+
+==========================================
+Starting phi4_eigensystem.jl...
+==========================================
+Testing φ⁴ tensor construction...
+Tensor shape: (8, 8, 8, 8)
+Top 5 singular values: [1.           0.9997110231 0.1924487665 0.1892659516 0.0514261677]
+
+Testing Z2 tensor construction...
+Z2 tensor created successfully
+Z2 tensor shape: [[4, 4], [4, 4], [4, 4], [4, 4]]
+[INFO] Using config: mu_120
+[INFO] Logging to ekrgilttrnr/logs/phi4_eigensystem/mu_120.log
+[2026-01-02 11:10:35] [INFO] ==================================================
+φ⁴ Jacobian Eigenvalue Computation
+Config: mu_120
+==================================================
+Parameters:
+  μ² = -1.2, λ = 1.0, κ = 0.3
+  χ = 15, gilt_eps = 6.0e-6
+  K = 32, D = 16
+  number_of_initial_steps = 8
+
+==================================================
+φ⁴ Jacobian Eigenvalue Computation
+Config: mu_120
+==================================================
+Parameters:
+  μ² = -1.2, λ = 1.0, κ = 0.3
+  χ = 15, gilt_eps = 6.0e-6
+  K = 32, D = 16
+  number_of_initial_steps = 8
+
+
+Computing eigenvalues...
+
+==========================================
+Finished: Fri Jan  2 11:10:46 EST 2026
+Exit code: 1
+==========================================
+WARNING: Output file not found: ekrgilttrnr/data/phi4_eigensystem/mu_120.data

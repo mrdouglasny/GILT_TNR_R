@@ -1,0 +1,50 @@
+==========================================
+Job ID: 53951447
+Job Name: ising_eigen
+Node: holy7c22603
+Config: default
+Started: Fri Jan  2 09:33:22 EST 2026
+==========================================
+Working directory: /n/home00/mdouglas/rg
+Julia version:
+julia version 1.12.3
+Using config: ekrgilttrnr/configs/eigensystem/default.toml
+
+==========================================
+Starting eigensystem.jl...
+==========================================
+[INFO] Using config: default
+[INFO] Logging to ekrgilttrnr/logs/eigensystem/default.log
+
+============================================================
+EIGENVALUES for Ising model (config: default)
+  Jratio=1.0, chi=30, gilt_eps=6.0e-6
+============================================================
+
+Expected (2D Ising, c=1/2 CFT):
+  σ (magnetization): λ ≈ 3.668 (Δ = 1/8)
+  ε (energy):        λ ≈ 2.0   (Δ = 1)
+  T (stress):        λ ≈ 1.0   (Δ = 2, marginal)
+
+Computed eigenvalues:
+--------------------------------------------------
+  λ_1 = -3.672 + 0.0i  |  Z₂ = -0.9999999990671977 + 0.0im
+  λ_2 = 1.9996 + 0.0i  |  Z₂ = 0.9999999998364831 + 0.0im
+  λ_3 = -1.5326 + 0.0i  |  Z₂ = -0.9999999918762452 + 0.0im
+  λ_4 = -1.5302 + 0.0i  |  Z₂ = -0.9999999943309634 + 0.0im
+  λ_5 = 1.0015 + 0.0i  |  Z₂ = 0.9999999855399748 + 0.0im
+  λ_6 = 0.998 + 0.0i  |  Z₂ = 0.9999999855458043 + 0.0im
+  λ_7 = -0.8864 + 0.0i  |  Z₂ = -0.9999999980162237 + 0.0im
+  λ_8 = 0.6314 + 0.0i  |  Z₂ = 0.9999999948874144 + 0.0im
+  λ_9 = 0.5946 + 0.1198i  |  Z₂ = 0.9999999093529423 + 0.0im
+  λ_10 = 0.5946 + -0.1198i  |  Z₂ = 0.9999999093529423 + 0.0im
+
+Results saved to: ekrgilttrnr/data/eigensystem/default.data
+Log saved to: ekrgilttrnr/logs/eigensystem/default.log
+
+==========================================
+Finished: Fri Jan  2 09:47:03 EST 2026
+Exit code: 0
+==========================================
+Output created successfully: ekrgilttrnr/data/eigensystem/default.data
+Size: 251M

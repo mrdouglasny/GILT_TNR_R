@@ -16,7 +16,7 @@ parser.add_argument('-o', '--out',
                     default='show')
 parser.add_argument('--maxchi',
                     help='maximum cg_chi to show (default: infinite)',
-                    type=np.float_, default=np.inf)
+                    type=np.float64, default=np.inf)
 parser.add_argument('-x', '--xaxis',
                     help='the quantity on the x axis (default: cg_chi)',
                     default="cg_chi")

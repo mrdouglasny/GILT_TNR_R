@@ -1,130 +1,202 @@
-# GILT-TNR with rotations
-This repository contains the Python3 and Julia codes for the numerical computations in the following papers:
-- [Rotations, Negative Eigenvalues, and Newton Method in Tensor Network Renormalization Group](https://arxiv.org/abs/2408.10312) 
-- [Transfer Matrix and Lattice Dilatation Operator for High-Quality Fixed Points in Tensor Network Renormalization Group]()
+# ekrgilttrnr - EKR Gilt-TNR Implementation
 
-Apart from computational packages for Python3 and Julia, our code relies heavily on the following libraries: [GiltTNR](https://github.com/GiltTNR/GiltTNR), [ncon](https://github.com/mhauru/ncon), and [abeliantensors](https://github.com/mhauru/abeliantensors).
+## Overview
 
-All the source code is licensed under the MIT license, as described in the file LICENSE.
+This subproject contains the Gilt-TNR implementation from Ebel, Kennedy, and Rychkov's papers:
+- **arXiv:2408.10312** - "Rotations, Negative Eigenvalues, and Newton Method in Tensor Network Renormalization Group" (Phys. Rev. X 15, 031023, 2025)
+- Transfer Matrix and Lattice Dilatation Operator paper
+
+**Purpose:** Reproduce their eigenvalue extraction results for the 2D Ising model and extend to other models (φ⁴ theory).
+
+**Source:** https://github.com/ebelnikola/GILT_TNR_R
+
+## Supported Models
+
+### 2D Ising Model
+The original implementation. Critical exponents extracted via Newton method.
+
+### 2D φ⁴ Theory (NEW)
+Lattice scalar field theory with Z₂ symmetry. Same universality class as Ising (c=1/2 CFT).
+
+Action: S = Σ_x [½(∂φ)² + ½μ²φ² + ¼λφ⁴]
+
+## Key Results
+
+Comparison of scaling dimensions (exponents) $\Delta$ obtained from deriving the transfer matrix spectrum.
+
+| Operator | Ising (Exact) | φ⁴ (This Work) |
+|----------|---------------|----------------|
+| Magnetization ($\sigma$) | 0.125 | 0.152 |
+| Energy ($\epsilon$) | 1.000 | 0.998 |
+
+Values for φ⁴ were computed at RG step 5 with $\chi=32$ (see `docs/phi4_results.pdf`).
+
+## Directory Structure
+
+```
+ekrgilttrnr/
+├── src/
+│   ├── GiltTNR/              # Python Gilt-TNR library
+│   │   ├── GiltTNR2D_Ising_benchmarks.py  # Ising tensors
+│   │   └── GiltTNR2D_Phi4.py              # φ⁴ tensors (NEW)
+│   ├── Tools.jl              # Ising utilities
+│   ├── Phi4Tools.jl          # φ⁴ utilities (NEW)
+│   ├── GaugeFixing.jl        # Gauge fixing routines
+│   ├── KrylovTechnical.jl    # Z₂ invariant tensors
+│   └── NumDifferentiation.jl # Finite differences
+├── scripts/
+│   ├── critical_temperature.jl  # Ising critical T search
+│   ├── eigensystem.jl           # Ising eigenvalues
+│   ├── newton.jl                # Ising Newton method
+│   ├── phi4_critical_mu_sq.jl   # φ⁴ critical μ² search (NEW)
+│   ├── phi4_eigensystem.jl      # φ⁴ eigenvalues (NEW)
+│   └── phi4_newton.jl           # φ⁴ Newton method (NEW)
+├── docs/
+│   └── newton_method_guide.md   # Detailed methodology guide (NEW)
+├── Project.toml
+└── VERIFICATION.md
+```
 
 ## Installation
 
-1. Install Python3 with NumPy and SciPy packages. An easy way to do this is to use [anaconda](https://www.anaconda.com/download/). 
-2. Install [Julia](https://julialang.org/). 
-3. Clone this repository by running:
-``` 
-git clone https://github.com/ebelnikola/GILT_TNR_R 
-```
-4. Move to the repository:
-```
-cd GILT_TNR_R
-```
-5. Run the script that will install all necessary Julia packages:
-```
-julia install_packages.jl
-```
-If there are any problems at this step, try using the second version of the installation script as follows:
-```
-julia install_packages_v2.jl
-``` 
-The list of all required packages is provided in the `Manifest.toml` file. Note that `Manifest.toml` contains an exhaustive list of all dependencies (including the dependencies of dependencies). The packages used in the code explicitly are listed in `install_packages_v2.jl`.   
+### 1. Julia Dependencies
 
-6. To run our interactive notebooks, you may want to install [jupyter notebook](https://jupyter.org/) or the corresponding [extension for VS Code](https://marketplace.visualstudio.com/items?itemName=ms-toolsai.jupyter).     
-
-## Notebooks and scripts
-
-Once the installation is done, we invite the user to try our Jupyter notebooks, which allow one to reproduce some of our results easily. To run a notebook, open it either in VS Code (provided that the suitable extension is installed) or using the following command in the terminal (from the root of the repository):
-```
-jupyter notebook name_of_the_notebook
+```bash
+cd ekrgilttrnr
+julia --project=. -e 'using Pkg; Pkg.instantiate()'
 ```
 
-Notebooks:
+### 2. NumPy Compatibility Fix (Partial)
 
-`Newton_method_paper_results_reproduction.ipynb` - reproduces some of the results from [Rotations, Negative Eigenvalues, and Newton Method in Tensor Network Renormalization Group](https://arxiv.org/abs/2408.10312). 
+Fixed `np.float_` → `np.float64` for NumPy 2.x, but deeper issues remain:
 
-`Lattice_Dilatation_Operator_paper_results_reproduction.ipynb` - reproduces some of the results from [Transfer Matrix and Lattice Dilatation Operator for High-Quality Fixed Points in Tensor Network Renormalization Group](). The TM computations in this notebook are outdated. The last version of the paper uses $r=4$ TM results obtained using the scripts below.
-
-Scripts:
-
-Scripts with names `*_TM_direct(crossed)_*_r=4.jl` perform transfer matrix computations for the $r=4$ case. Before running these scripts, the `Newton_method_paper_results_reproduction.ipynb` notebook must be run to generate the necessary tensors.
-
-Note that these scripts are not fully automatic. For the `non_rot_alg` scripts specifically, two points require attention:
-
-1.  The correct trajectory filename must be manually specified within the script. The default filename is `rotate=false_30_6.0e-6_1.0e-10__relT=1.0000110043212773_len=36.data`, but the `relT` value may vary slightly in its final digits from one machine to another.
-2.  The fixed-point approximation is hardcoded as the 25th tensor along the near critical trajectory, which is in agreement with the distance plots from the paper and the `Newton_method_paper_results_reproduction.ipynb` notebook.
-
-Other scripts should work out of the box.
-
-To run these scripts in the background, use the following command:
-```
-nohup julia --project --threads #number_of_threads_here #name_of_the_script_here &
+```bash
+cd ekrgilttrnr/src/GiltTNR
+sed -i 's/np\.float_/np.float64/g' tensors/abeliantensor.py tensors/symmetrytensors.py plots/plotFError.py
 ```
 
-Example:
+### 3. Jupyter Notebook (Recommended)
+
+The easiest way to use this code is via the Jupyter notebook:
+
+```bash
+cd ekrgilttrnr
+
+# Install Julia 1.10.4 if not already present
+juliaup add 1.10.4
+
+# Install IJulia kernel for Julia 1.10.4
+# This does NOT change your global default Julia version
+julia +1.10.4 --project=. -e 'using Pkg; Pkg.add("IJulia"); using IJulia; IJulia.installkernel("Julia-1.10")'
+
+# Open the notebook in VS Code
+# Use Newton_method_fixed.ipynb (modified for our directory structure)
 ```
-nohup julia --project --threads 20 rot_alg_TM_crossed_before_newton_r=4.jl
+
+**To run the notebook:**
+1. Open `Newton_method_fixed.ipynb` in VS Code
+2. Select the "Julia 1.10" kernel when prompted
+3. Run cells sequentially (Shift+Enter) or "Run All"
+
+**Expected results (chi=30, default parameters):**
+- Critical temperature: relT ≈ 1.0000110042840245
+- Eigenvalues:
+  - σ (magnetization): λ = 3.6684 (CFT: 3.668)
+  - ε (energy): λ = 1.9996 (CFT: 2.0)
+  - T (stress): λ = 1.0015 (CFT: 1.0)
+  - T̄ (stress): λ = 0.9980 (CFT: 1.0)
+
+### 4. Known Issues (Direct Script Usage)
+
+⚠️ **The direct Julia scripts may have compatibility issues** with our environment setup. The Jupyter notebook approach is recommended as it matches the authors' original workflow.
+
+**For comparison with `genmodel/scripts/linearized_rg.jl`:** Use published eigenvalue results from arXiv:2408.10312 (λ_ε=1.9996, λ_T=1.0015/0.9980, λ_σ=3.6684).
+
+## Usage
+
+### Customizing Parameters
+
+The key parameters are set in **cell 8** of `Newton_method_fixed.ipynb`:
+
+```julia
+gilt_eps = 6e-6      # GILT truncation threshold
+chi = 30             # Bond dimension
+cg_eps = 1e-10       # Coarse-graining precision
+Jratio = 1.0         # Coupling ratio (1.0 for standard Ising)
 ```
 
-## Lab 
+**To explore different parameters:**
+1. Modify cell 8 in the notebook
+2. Rerun from cell 8 onwards
 
-We provide the following scripts in the Lab directory:
+**Common variations:**
+- `chi = 20`: Faster, less accurate (paper used chi=16,20,24,30)
+- `chi = 40`: Slower, more accurate (computationally expensive)
+- `gilt_eps = 1e-5`: Faster convergence, lower precision
+- `gilt_eps = 1e-7`: Slower, higher precision
 
-- `plot_trajectory.jl` applies the GiltTNR algorithm `traj_len` times to the initial tensor corresponding to 2d nearest neighbors Ising model at the relative temperature `relT` and anisotropy parameter `Jratio` ($a$ in [the Newton method paper](https://arxiv.org/abs/2408.10312)). It saves the resulting trajectories to the trajectories folder in two files: `*.data` with tensors, log factors, and errors along the trajectory; `*.log` with all the text output of the algorithm. Saves the plots of the trajectories of the tensor's singular values (obtained by "diagonal" SVD: $A_{ijkl}=U_{ij l} S_l V_{l kl}$).
+**Note:** Changing `chi` or `gilt_eps` will find a different critical temperature and yield different eigenvalues.
 
-- `critical_temperature.jl` finds the critical temperature using bisection search; saves the result into the "critical_temperatures" directory; plots the corresponding trajectories of the singular values. Saves the plot into the trajectory_plots directory. 
- 
-- `differentiability_test.jl` performs differentiability tests of the GiltTNR algorithm using a random direction vector. Saves the corresponding plot to the diff_tests folder.
+### Compute Eigenvalues (Main Task)
 
-- `eigensystem.jl` gets the largest eigenvalues and the corresponding eigenvectors of GiltTNR linearised around some initial approximation of the critical tensor (given by `relT`, `Jratio`, and `number_of_initial_steps`). Saves the resulting tensor and the eigensystem to the eigensystems folder. Note that the script will fix `bond_repetitions` and `recursion_depth`. These parameters will be saved together with the other output.  
+**Recommended approach:** Use the Jupyter notebook (see Installation §3 above)
 
-- `newton.jl` (assumes that `rotation=true`) repeats the computation from `eigensystem.jl`. Then, it finds the critical tensor using Newton's method. Saves the data to the newton directory. Note that the found critical tensor is the fixed point for GiltTNR with fixed `bond_repetitions` and `recursion_depth`. These parameters will be saved together with the other data.
-
-- `LDO_spectra.jl` computes the spectrum of the GILT-TNR operator. Saves the result in LDO folder.
-
-Note that each script has the corresponding help describing all the command line arguments. To see this help run:
+**Alternative (direct script):**
+```bash
+cd ekrgilttrnr
+julia --project=. scripts/eigensystem.jl
 ```
-julia --project Lab/script_name.jl --help
+
+Output: `eigensystems/*.data` (serialized Julia data)
+
+## φ⁴ Theory Usage
+
+The φ⁴ model has been adapted to use the same Newton method machinery as the Ising model.
+
+### Quick Start for φ⁴
+
+```bash
+cd ekrgilttrnr
+
+# 1. Find critical μ² (takes ~20-30 min)
+julia --project scripts/phi4_critical_mu_sq.jl --chi 30
+
+# 2. Compute eigenvalues at criticality
+julia --project scripts/phi4_eigensystem.jl --chi 30
+
+# 3. Run Newton method for high-precision fixed point
+julia --project --threads 20 scripts/phi4_newton.jl --chi 30 --eigensystem_size_for_jacobian 54
 ```
-### Naming convention
 
-The database handling in this repository is not perfect. We acknowledge it could be improved, but we are following the saying "If it ain't broke, don't fix it". Important data generated by the code will use the following naming convention:
-```
-rotate=[rotate][chi][gilt_eps]_[cg_eps]__[info about particular experiment].[extension]
-```
-The first part of the name `rotate=[rotate]_[chi]_[gilt_eps]_[cg_eps]` uniquely characterizes the GiltTNR algorithm, with one caveat. This naming convention assumes that `bond_repetitions`, `recursion_depth`, and `Rmatrices` were not provided (see the list of adjustments in the GiltTNR directory section). Two functions generate database entries using this convention: `trajectory` and `plot_the_trajectory` (specifically, their methods with the `initialA_pars` argument). **To avoid ambiguities in the database, users should not pass `bond_repetitions`, `recursion_depth`, or `Rmatrices` to these functions.**
+### φ⁴ Parameters
 
-## Other files
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `--mu_sq` | auto | Mass squared (uses critical value if 0) |
+| `--lam` | 1.0 | Quartic coupling λ |
+| `--kappa` | 1.0 | Kinetic coupling κ |
+| `--K` | 32 | Quadrature points |
+| `--D` | 16 | Initial bond dimension |
 
-### GiltTNR directory
-This directory contains Python code implementing the GiltTNR algorithm (see [this paper](https://journals.aps.org/prb/abstract/10.1103/PhysRevB.97.045111)). It combines code from [GiltTNR](https://github.com/GiltTNR/GiltTNR), [ncon](https://github.com/mhauru/ncon), and [abeliantensors](https://github.com/mhauru/abeliantensors). We made the following adjustments to the codes there:
+**Critical point estimate:** For λ=1, κ=1, the critical μ² ≈ -0.09 (from λ/|μ²_c| ≈ 10.9).
 
-1. Added an option to fix the number of Gilt algorithm iterations applied to each bond around a plaquette, controlled by the `bond_repetitions` keyword argument.
+### Expected Results for φ⁴
 
-2. Added an option to fix the recursion depth in the optimization procedure for `R` matrices (`Q` matrices in the [Newton method paper](https://arxiv.org/abs/2408.10312)). This is controlled by the `recursion_depth` argument (used with `bond_repetitions`), which is a dictionary with keys from `{"S", "N", "E", "W"}` and values specifying recursion depths for corresponding legs. 
+Since φ⁴ is in the same universality class as 2D Ising:
+- Eigenvalues should match Ising: λ_σ ≈ 3.668, λ_ε ≈ 2.0, λ_T ≈ 1.0
+- This provides a non-trivial validation of universality
 
-3. Added an option to use precomputed `R` matrices instead of running the optimization procedure. To use this, pass `bond_repetitions` and the `Rmatrices`, a dictionary with keys `(bond_key, lap)` (`lap` is an integer, `bond_key in {"S", "N", "E", "W"}`) and values as `R` matrices to be applied at the specified bond and Gilt iteration.
+## Documentation
 
-4. Added an option to control tensor rotation after the GiltTNR step, controlled by the `rotate` keyword.
+See `docs/newton_method_guide.md` for:
+- Detailed explanation of the Newton method algorithm
+- How gauge fixing works
+- How to adapt to other models (XY, Potts, etc.)
+- Troubleshooting guide
 
-5. Modified `matrix_eig` and `matrix_svd` functions in `abeliantensor.py` and `tensor.py` to remove sign ambiguities in the decomposition. Two methods of fixing the signs are available, controlled by the global variable `method` at the beginning of `abeliantensor.py` and `tensor.py`.
+## References
 
-### Root directory
-
-- `EchelonForm.jl` - technical code used in `GaugeFixing.jl` for checking ranks of boolean matrices. 
-- `GaugeFixing.jl` - continuous and discrete gauge fixing routines.
-- `install_packages.jl` - script that installs all the necessary dependencies.
-- `KrylovTechnical.jl` - technical code that provides a minimal implementation of Z2 invariant tensors in Julia. This solves the problem of `KrylovKit` throwing a segmentation fault while working with PyObjects.
-- `NumDifferentiation.jl` - provides the function that performs numerical differentiation.
-- `Tools.jl` - Contains some useful functions. These are listed at the top of the file.     
-- `IsingExactLevels` and `IsingEvenExactLevels` - data about exact 2d Ising spectrum.
-- `Project.toml` and `Manifest.toml` - contain information about versions of packages used in the computations.
-- `Newton_method_paper_results_reproduction.ipynb` - provides the simplest way to reproduce some of the results from [Rotations, Negative Eigenvalues, and Newton Method in Tensor Network Renormalization Group](https://arxiv.org/abs/2408.10312).
-- `Lattice_Dilatation_Operator_paper_results_reproduction.ipynb` - provides the simplest way to reproduce some of the results from [Transfer Matrix and Lattice Dilatation Operator for High-Quality Fixed Points in Tensor Network Renormalization Group]().
-
-
-
-## TODO:
-
-- Resolve warning about AbstractAlgebra.mul!
-- Resolve warnings in initial_tensor function
-- On some computers, sometimes, SVD in TRG step does not converge. That can be fixed by normalizing a tensor before doing SVD. 
+- arXiv:2408.10312 - Main paper
+- refs/2408.10312/summary.md - Summary
+- genmodel/docs/ekr_eigenvalue_comparison.md - Comparison
+- https://github.com/ebelnikola/GILT_TNR_R

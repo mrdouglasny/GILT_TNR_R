@@ -1,0 +1,23 @@
+# Quick test config for Phi4 eigensystem
+# Run time: ~5-10 minutes
+
+chi = 16
+gilt_eps = 6e-6
+cg_eps = 1e-10
+rotate = false
+
+# Phi4 Parameters
+lam = 1.0
+kappa = 1.0
+K = 32
+D = 16
+
+# Eigensystem Parameters
+N = 5  # Number of eigenvalues
+krylovdim = 12
+verbosity = 1
+
+ord = 2  # Finite difference order
+stp = 1e-4  # Finite difference step
+
+Z2_odd_sector = true

@@ -1,0 +1,20 @@
+==========================================
+Job ID: 53964547
+Job Name: phi4_eigen
+Node: holy7c24501
+Config: mu_135
+Started: Fri Jan  2 10:28:53 EST 2026
+==========================================
+Working directory: /n/home00/mdouglas/rg
+Julia version:
+Using config: ekrgilttrnr/configs/phi4_eigensystem/mu_135.toml
+
+==========================================
+Starting phi4_eigensystem.jl...
+==========================================
+
+==========================================
+Finished: Fri Jan  2 10:29:22 EST 2026
+Exit code: 1
+==========================================
+WARNING: Output file not found: ekrgilttrnr/data/phi4_eigensystem/mu_135.data

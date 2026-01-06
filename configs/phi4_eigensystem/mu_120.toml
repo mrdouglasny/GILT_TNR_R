@@ -1,0 +1,15 @@
+chi = 15
+gilt_eps = 6e-6
+cg_eps = 1e-10
+rotate = false
+lam = 1.0
+kappa = 0.3
+mu_sq = -1.20
+K = 32
+D = 16
+number_of_initial_steps = 8
+N = 5
+krylovdim = 15
+verbosity = 1
+ord = 2
+stp = 1e-4

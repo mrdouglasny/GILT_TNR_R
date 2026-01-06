@@ -163,12 +163,32 @@ end=#
 
 import Base.:+
 
+# Helper function to compute common shape (element-wise maximum)
+function common_shape(v::Z2Tensor, w::Z2Tensor)
+	new_shape = max.(v.shape, w.shape)
+	return new_shape
+end
+
 function Base.:+(v::Z2Tensor, w::Z2Tensor)
-	sum = deepcopy(v)
-	for (k, block) in sum.sects
-		block .+= w[k]
+	# If shapes match, use fast path
+	if v.shape == w.shape
+		result = deepcopy(v)
+		for (k, block) in result.sects
+			block .+= w[k]
+		end
+		return result
 	end
-	return sum
+
+	# Otherwise, extend both to common shape
+	new_shape = common_shape(v, w)
+	v_ext = extend_blocks_by_zeros(v, new_shape)
+	w_ext = extend_blocks_by_zeros(w, new_shape)
+
+	result = deepcopy(v_ext)
+	for (k, block) in result.sects
+		block .+= w_ext[k]
+	end
+	return result
 end
 
 #=for _ = 1:1000
@@ -196,11 +216,25 @@ end=#
 import Base.:-
 
 function Base.:-(v::Z2Tensor, w::Z2Tensor)
-	diff = deepcopy(v)
-	for (k, block) in diff.sects
-		block .-= w[k]
+	# If shapes match, use fast path
+	if v.shape == w.shape
+		result = deepcopy(v)
+		for (k, block) in result.sects
+			block .-= w[k]
+		end
+		return result
 	end
-	return diff
+
+	# Otherwise, extend both to common shape
+	new_shape = common_shape(v, w)
+	v_ext = extend_blocks_by_zeros(v, new_shape)
+	w_ext = extend_blocks_by_zeros(w, new_shape)
+
+	result = deepcopy(v_ext)
+	for (k, block) in result.sects
+		block .-= w_ext[k]
+	end
+	return result
 end
 
 #=for _ = 1:1000
@@ -421,8 +455,31 @@ end=#
 import LinearAlgebra.mul!
 
 function LinearAlgebra.mul!(w::Z2Tensor, v::Z2Tensor, α)
+	# Handle shape mismatch: resize w to match v if needed
+	if w.shape != v.shape
+		# Extend w to match v's shape
+		new_shape = v.shape
+		for (k, block) in w.sects
+			expected_size = Tuple(new_shape[i, k[i]+1] for i in 1:4)
+			if size(block) != expected_size
+				w.sects[k] = zeros(eltype(block), expected_size)
+			end
+		end
+		w.shape .= new_shape
+	end
+
 	for (k, block) in w.sects
-		block .= v.sects[k] * α
+		if haskey(v.sects, k)
+			v_block = v.sects[k]
+			if size(block) == size(v_block)
+				block .= v_block * α
+			else
+				# Resize block to match v_block
+				w.sects[k] = v_block * α
+			end
+		else
+			block .= 0
+		end
 	end
 	return w
 end
@@ -497,8 +554,33 @@ end=#
 import LinearAlgebra.axpy!
 
 function LinearAlgebra.axpy!(α, v::Z2Tensor, w::Z2Tensor)
+	# Handle shape mismatch by extending w to match v
+	if w.shape != v.shape
+		new_shape = max.(w.shape, v.shape)
+		for (k, block) in w.sects
+			expected_size = Tuple(new_shape[i, k[i]+1] for i in 1:4)
+			if size(block) != expected_size
+				new_block = zeros(eltype(block), expected_size)
+				# Copy old data into new block
+				old_size = size(block)
+				new_block[1:old_size[1], 1:old_size[2], 1:old_size[3], 1:old_size[4]] .= block
+				w.sects[k] = new_block
+			end
+		end
+		w.shape .= new_shape
+	end
+
 	for (k, block) in w.sects
-		block .+= α * v.sects[k]
+		if haskey(v.sects, k)
+			v_block = v.sects[k]
+			if size(block) == size(v_block)
+				block .+= α * v_block
+			else
+				# v_block may be smaller; add only overlapping region
+				v_size = size(v_block)
+				block[1:v_size[1], 1:v_size[2], 1:v_size[3], 1:v_size[4]] .+= α * v_block
+			end
+		end
 	end
 	return w
 end
@@ -573,9 +655,28 @@ end=#
 
 import LinearAlgebra.dot
 function LinearAlgebra.dot(v::Z2Tensor, w::Z2Tensor)
+	# If shapes match, use fast path
+	if v.shape == w.shape
+		res = 0.0
+		for (k, v_block) in v.sects
+			if haskey(w.sects, k)
+				res += dot(v_block, w[k])
+			end
+		end
+		return res
+	end
+
+	# Otherwise, extend both to common shape before computing dot product
+	# This ensures we get the correct inner product even with mismatched shapes
+	new_shape = common_shape(v, w)
+	v_ext = extend_blocks_by_zeros(v, new_shape)
+	w_ext = extend_blocks_by_zeros(w, new_shape)
+
 	res = 0.0
-	for (k, _) in v.sects
-		res += dot(v[k], w[k])
+	for (k, v_block) in v_ext.sects
+		if haskey(w_ext.sects, k)
+			res += dot(v_block, w_ext[k])
+		end
 	end
 	return res
 end

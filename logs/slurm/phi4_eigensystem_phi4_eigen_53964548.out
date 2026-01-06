@@ -1,0 +1,20 @@
+==========================================
+Job ID: 53964548
+Job Name: phi4_eigen
+Node: holy7c24503
+Config: mu_110
+Started: Fri Jan  2 10:29:02 EST 2026
+==========================================
+Working directory: /n/home00/mdouglas/rg
+Julia version:
+Using config: ekrgilttrnr/configs/phi4_eigensystem/mu_110.toml
+
+==========================================
+Starting phi4_eigensystem.jl...
+==========================================
+
+==========================================
+Finished: Fri Jan  2 10:29:27 EST 2026
+Exit code: 1
+==========================================
+WARNING: Output file not found: ekrgilttrnr/data/phi4_eigensystem/mu_110.data

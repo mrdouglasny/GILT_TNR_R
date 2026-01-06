@@ -1,0 +1,12 @@
+# Gentle GILT for φ⁴ - prevents collapse
+chi = 30
+gilt_eps = 1e-8
+cg_eps = 1e-10
+rotate = false
+lam = 1.0
+kappa = 0.3
+K = 32
+D = 16
+max_steps = 30
+verbosity = 1
+mu_sq = -1.35

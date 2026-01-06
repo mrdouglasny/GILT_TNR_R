@@ -1,0 +1,29 @@
+ERROR: LoadError: ArgumentError: invalid Array dimensions
+Stacktrace:
+  [1] checked_dims
+    @ ./boot.jl:641 [inlined]
+  [2] Array
+    @ ./boot.jl:651 [inlined]
+  [3] Array
+    @ ./boot.jl:661 [inlined]
+  [4] zeros
+    @ ./array.jl:595 [inlined]
+  [5] zeros
+    @ ./array.jl:591 [inlined]
+  [6] construct_linear_system(list_of_elements::Vector{Tuple{CartesianIndex{4}, Float64}}, dimH::Int64, dimV::Int64)
+    @ Main ~/rg/ekrgilttrnr/src/GaugeFixing.jl:321
+  [7] get_HV_and_indices(A::PyObject; tol::Float64)
+    @ Main ~/rg/ekrgilttrnr/src/GaugeFixing.jl:407
+  [8] get_HV_and_indices
+    @ ~/rg/ekrgilttrnr/src/GaugeFixing.jl:398 [inlined]
+  [9] fix_discrete_gauge(A::PyObject; tol::Float64)
+    @ Main ~/rg/ekrgilttrnr/src/GaugeFixing.jl:430
+ [10] top-level scope
+    @ ~/rg/ekrgilttrnr/scripts/phi4_eigensystem.jl:106
+ [11] include(mod::Module, _path::String)
+    @ Base ./Base.jl:306
+ [12] exec_options(opts::Base.JLOptions)
+    @ Base ./client.jl:317
+ [13] _start()
+    @ Base ./client.jl:550
+in expression starting at /n/home00/mdouglas/rg/ekrgilttrnr/scripts/phi4_eigensystem.jl:106

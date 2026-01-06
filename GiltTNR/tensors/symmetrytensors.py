@@ -25,13 +25,13 @@ class TensorZN(AbelianTensor):
         )
 
     @classmethod
-    def eye(cls, dim, qim=None, qodulus=None, dtype=np.float_):
+    def eye(cls, dim, qim=None, qodulus=None, dtype=np.float64):
         """Return the identity matrix of the given dimension `dim`."""
         if qim is None:
             qim = cls._dim_to_qim(dim)
         qodulus = cls.qodulus
         return super(TensorZN, cls).eye(
-            dim, qim=qim, qodulus=qodulus, dtype=np.float_
+            dim, qim=qim, qodulus=qodulus, dtype=np.float64
         )
 
     @classmethod

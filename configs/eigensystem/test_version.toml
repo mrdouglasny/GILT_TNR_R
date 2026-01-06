@@ -1,0 +1,24 @@
+# Test config to verify Julia 1.12.3 compatibility
+# Very quick run (~1-2 minutes)
+
+[metadata]
+description = "Test Julia 1.12.3 compatibility - minimal parameters"
+
+chi = 30  # Use chi=30 to match existing critical temp file
+gilt_eps = 6e-6
+cg_eps = 1e-10
+rotate = false
+
+relT = 1.0000110  # Critical temperature (approximate for chi=30)
+Jratio = 1.0
+
+number_of_initial_steps = 5
+N = 3  # Just 3 eigenvalues for quick test
+krylovdim = 8
+verbosity = 1
+
+ord = 2  # Finite difference order
+stp = 1e-4  # Finite difference step
+
+Z2_odd_sector = true
+freeze_R = false

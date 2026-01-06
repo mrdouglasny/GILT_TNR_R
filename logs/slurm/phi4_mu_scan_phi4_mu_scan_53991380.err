@@ -1,0 +1,15 @@
+ERROR: LoadError: Refusing to overwrite existing output (config: mu_m1.40)
+Stacktrace:
+ [1] error(s::String)
+   @ Base ./error.jl:44
+ [2] setup_with_config(script_name::String, cli_args::Vector{String}; base_dir::String)
+   @ Main.ProjectUtils ~/rg/src/julia/ProjectUtils.jl:374
+ [3] top-level scope
+   @ ~/rg/ekrgilttrnr/scripts/phi4_mu_scan.jl:27
+ [4] include(mod::Module, _path::String)
+   @ Base ./Base.jl:306
+ [5] exec_options(opts::Base.JLOptions)
+   @ Base ./client.jl:317
+ [6] _start()
+   @ Base ./client.jl:550
+in expression starting at /n/home00/mdouglas/rg/ekrgilttrnr/scripts/phi4_mu_scan.jl:27

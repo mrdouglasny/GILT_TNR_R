@@ -266,8 +266,9 @@ function flatten_the_vec_of_vec(vec)
 end
 
 function list_of_allowed_elements(A; tol = 1e-7)
-	number_of_threads = Threads.nthreads()
-	element_lists = [Tuple{CartesianIndex{4}, Float64}[] for _ in 1:number_of_threads]
+	# Use maxthreadid() for Julia 1.9+ task-based threading compatibility
+	max_tid = Threads.maxthreadid()
+	element_lists = [Tuple{CartesianIndex{4}, Float64}[] for _ in 1:max_tid]
 	AA = A.to_ndarray()
 	Threads.@threads for ind ∈ CartesianIndices(size(AA))
 		condition1 = abs(AA[ind]) > tol
@@ -281,8 +282,9 @@ end
 
 
 function list_of_allowed_elements(A::Array; tol = 1e-7)
-	number_of_threads = Threads.nthreads()
-	element_lists = [Tuple{CartesianIndex{4}, Float64}[] for _ in 1:number_of_threads]
+	# Use maxthreadid() for Julia 1.9+ task-based threading compatibility
+	max_tid = Threads.maxthreadid()
+	element_lists = [Tuple{CartesianIndex{4}, Float64}[] for _ in 1:max_tid]
 	Threads.@threads for ind ∈ CartesianIndices(size(A))
 		condition1 = abs(A[ind]) > tol
 		condition2 = !(ind[1] == ind[3] && ind[2] == ind[4])

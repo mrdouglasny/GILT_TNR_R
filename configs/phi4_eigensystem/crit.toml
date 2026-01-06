@@ -1,0 +1,19 @@
+# Config for eigenvalues at saved critical point
+# mu_sq = 0 triggers lookup from critical_temperatures/
+
+chi = 15
+gilt_eps = 6e-6
+cg_eps = 1e-10
+rotate = false
+lam = 1.0
+kappa = 0.3
+K = 32
+D = 16
+mu_sq = 0.0  # Lookup saved critical value
+number_of_initial_steps = 10
+N = 10
+krylovdim = 25
+verbosity = 1
+ord = 2
+stp = 1e-4
+search_tol = 1e-4  # Must match saved file tolerance

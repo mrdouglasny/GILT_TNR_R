@@ -1,0 +1,23 @@
+ERROR: LoadError: ArgumentError: Package KrylovKit [0b1a1467-8014-51b9-945f-bf0ae24f4b77] is required but does not seem to be installed:
+ - Run `Pkg.instantiate()` to install all recorded dependencies.
+
+Stacktrace:
+ [1] __require_prelocked(pkg::Base.PkgId, env::String)
+   @ Base ./loading.jl:2615
+ [2] _require_prelocked(uuidkey::Base.PkgId, env::String)
+   @ Base ./loading.jl:2493
+ [3] macro expansion
+   @ ./loading.jl:2421 [inlined]
+ [4] macro expansion
+   @ ./lock.jl:376 [inlined]
+ [5] __require(into::Module, mod::Symbol)
+   @ Base ./loading.jl:2386
+ [6] require(into::Module, mod::Symbol)
+   @ Base ./loading.jl:2362
+ [7] include(mod::Module, _path::String)
+   @ Base ./Base.jl:306
+ [8] exec_options(opts::Base.JLOptions)
+   @ Base ./client.jl:317
+ [9] _start()
+   @ Base ./client.jl:550
+in expression starting at /n/home00/mdouglas/rg/ekrgilttrnr/scripts/phi4_eigensystem.jl:29

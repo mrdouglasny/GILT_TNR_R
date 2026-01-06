@@ -160,7 +160,7 @@ class AbelianTensor(TensorCommon):
         qodulus=None,
         sects=None,
         dirs=None,
-        dtype=np.float_,
+        dtype=np.float64,
         defval=0,
         charge=0,
         invar=True,
@@ -289,7 +289,7 @@ class AbelianTensor(TensorCommon):
             return res
 
     @classmethod
-    def eye(cls, dim, qim=None, qodulus=None, dtype=np.float_):
+    def eye(cls, dim, qim=None, qodulus=None, dtype=np.float64):
         """Return an identity tensor of ``shape = [dim, dim]``, ``qhape = [qim,
         qim]`` and ``dirs = [1, -1]``.
         """
@@ -757,13 +757,13 @@ class AbelianTensor(TensorCommon):
     def real(self):
         """Return the real part."""
         res = self._defer_unary_elementwise(np.real)
-        res.dtype = np.float_
+        res.dtype = np.float64
         return res
 
     def imag(self):
         """Return the imaginary part."""
         res = self._defer_unary_elementwise(np.imag)
-        res.dtype = np.float_
+        res.dtype = np.float64
         return res
 
     def sum(self):
@@ -1993,7 +1993,7 @@ class AbelianTensor(TensorCommon):
             zip(self.qhape[1], self.shape[1])
         )
 
-        S_dtype = np.float_ if hermitian else np.complex_
+        S_dtype = np.float64 if hermitian else np.complex_
         U_dtype = self.dtype if hermitian else np.complex_
 
         # Eigenvalue decompose each sector at a time.
@@ -2181,7 +2181,7 @@ class AbelianTensor(TensorCommon):
                 shp = v.shape
                 m = min(shp)
                 u = np.empty((shp[0], m), dtype=self.dtype)
-                s = np.empty((m,), dtype=np.float_)
+                s = np.empty((m,), dtype=np.float64)
                 v = np.empty((m, shp[1]), dtype=self.dtype)
             else:
                 if sparse and maxchi < min(v.shape) - 1:
@@ -2255,7 +2255,7 @@ class AbelianTensor(TensorCommon):
             qhape=[new_qim],
             dirs=[d],
             qodulus=self.qodulus,
-            dtype=np.float_,
+            dtype=np.float64,
             invar=False,
             charge=0,
         )

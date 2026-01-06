@@ -1,0 +1,41 @@
+ERROR: LoadError: PyError ($(Expr(:escape, :(ccall(#= /n/home00/mdouglas/.julia/packages/PyCall/1gn3u/src/pyoperators.jl:12 =# @pysym(:PyNumber_TrueDivide), PyPtr, (PyPtr, PyPtr), a, b))))) <class 'ZeroDivisionError'>
+ZeroDivisionError('float division by zero')
+  File "/n/home00/mdouglas/rg/ekrgilttrnr/src/GiltTNR/tensors/abeliantensor.py", line 58, in deferer
+    return type(self)._defer_binary_elementwise(
+  File "/n/home00/mdouglas/rg/ekrgilttrnr/src/GiltTNR/tensors/abeliantensor.py", line 656, in _defer_binary_elementwise
+    res.defval = op_func(self.defval, B, *args, **kwargs)
+
+Stacktrace:
+  [1] pyerr_check(msg::String, val::Nothing)
+    @ PyCall ~/.julia/packages/PyCall/1gn3u/src/exception.jl:75
+  [2] pyerr_check(msg::String)
+    @ PyCall ~/.julia/packages/PyCall/1gn3u/src/exception.jl:79
+  [3] _handle_error(msg::String)
+    @ PyCall ~/.julia/packages/PyCall/1gn3u/src/exception.jl:96
+  [4] macro expansion
+    @ ~/.julia/packages/PyCall/1gn3u/src/exception.jl:110 [inlined]
+  [5] /
+    @ ~/.julia/packages/PyCall/1gn3u/src/pyoperators.jl:11 [inlined]
+  [6] /(a::PyObject, b::Float64)
+    @ PyCall ~/.julia/packages/PyCall/1gn3u/src/pyoperators.jl:13
+  [7] linearized_RG(dA::Z2Tensor)
+    @ Main ~/rg/ekrgilttrnr/scripts/phi4_eigensystem.jl:138
+  [8] apply
+    @ ~/.julia/packages/KrylovKit/r8GLV/src/apply.jl:2 [inlined]
+  [9] initialize(iter::ArnoldiIterator{typeof(linearized_RG), Z2Tensor, ModifiedGramSchmidt2}; verbosity::Int64)
+    @ KrylovKit ~/.julia/packages/KrylovKit/r8GLV/src/factorizations/arnoldi.jl:141
+ [10] _schursolve(A::Function, x₀::Z2Tensor, howmany::Int64, which::Symbol, alg::Arnoldi{ModifiedGramSchmidt2, Float64})
+    @ KrylovKit ~/.julia/packages/KrylovKit/r8GLV/src/eigsolve/arnoldi.jl:180
+ [11] eigsolve(A::Function, x₀::Z2Tensor, howmany::Int64, which::Symbol, alg::Arnoldi{ModifiedGramSchmidt2, Float64})
+    @ KrylovKit ~/.julia/packages/KrylovKit/r8GLV/src/eigsolve/arnoldi.jl:131
+ [12] eigsolve(f::Function, x₀::Z2Tensor, howmany::Int64, which::Symbol; kwargs::@Kwargs{krylovdim::Int64, verbosity::Int64})
+    @ KrylovKit ~/.julia/packages/KrylovKit/r8GLV/src/eigsolve/eigsolve.jl:200
+ [13] top-level scope
+    @ ~/rg/ekrgilttrnr/scripts/phi4_eigensystem.jl:147
+ [14] include(mod::Module, _path::String)
+    @ Base ./Base.jl:306
+ [15] exec_options(opts::Base.JLOptions)
+    @ Base ./client.jl:317
+ [16] _start()
+    @ Base ./client.jl:550
+in expression starting at /n/home00/mdouglas/rg/ekrgilttrnr/scripts/phi4_eigensystem.jl:147

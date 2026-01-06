@@ -1,0 +1,6 @@
+┌ Warning: construct_linear_system: unable to find 58 independent rows, will fix only 57 dofs
+└ @ Main ~/rg/ekrgilttrnr/src/GaugeFixing.jl:367
+┌ Info: Arnoldi eigsolve finished after 4 iterations:
+│ *  10 eigenvalues converged
+│ *  norm of residuals = (7.009735452457523e-50, 6.560197884594733e-43, 1.4157648516459987e-35, 5.6103153113603374e-36, 2.077347670830652e-23, 4.0596072541586105e-23, 1.093768535348871e-24, 2.4282629548578365e-14, 1.4979804712237047e-14, 1.4979804712237047e-14)
+└ *  number of operations = 61

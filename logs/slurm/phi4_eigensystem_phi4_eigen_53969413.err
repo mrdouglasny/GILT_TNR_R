@@ -1,0 +1,16 @@
+┌ Warning: Invariant subspace of dimension 1 (up to requested tolerance `tol = 1.0e-12`), which is smaller than the number of requested eigenvalues (i.e. `howmany == 5`); setting `howmany = 1`.
+└ @ KrylovKit ~/.julia/packages/KrylovKit/r8GLV/src/eigsolve/arnoldi.jl:200
+┌ Warning: Assignment to `eigenvalue_log` in soft scope is ambiguous because a global variable by the same name exists: `eigenvalue_log` will be treated as a new local. Disambiguate by using `local eigenvalue_log` to suppress this warning or `global eigenvalue_log` to assign to the existing global variable.
+└ @ ~/rg/ekrgilttrnr/scripts/phi4_eigensystem.jl:157
+ERROR: LoadError: UndefVarError: `eigenvalue_log` not defined in local scope
+Suggestion: check for an assignment to a local variable that shadows a global of the same name.
+Stacktrace:
+ [1] top-level scope
+   @ ~/rg/ekrgilttrnr/scripts/phi4_eigensystem.jl:157
+ [2] include(mod::Module, _path::String)
+   @ Base ./Base.jl:306
+ [3] exec_options(opts::Base.JLOptions)
+   @ Base ./client.jl:317
+ [4] _start()
+   @ Base ./client.jl:550
+in expression starting at /n/home00/mdouglas/rg/ekrgilttrnr/scripts/phi4_eigensystem.jl:155

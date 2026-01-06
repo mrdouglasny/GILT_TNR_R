@@ -1,0 +1,53 @@
+Precompiling packages...
+    813.1 ms  ✓ TextWrap
+   1650.5 ms  ✓ ArgParse
+  2 dependencies successfully precompiled in 3 seconds. 1 already precompiled.
+Precompiling packages...
+   1171.0 ms  ✓ VersionParsing
+   1162.7 ms  ✓ Preferences
+    882.9 ms  ✓ PrecompileTools
+┌ Warning: attempting to remove probably stale pidfile
+│   path = "/n/home00/mdouglas/.julia/compiled/v1.12/Parsers/833b9_i1rMR.ji.pidfile"
+└ @ FileWatching.Pidfile ~/.local/julia-1.12.3/share/julia/stdlib/v1.12/FileWatching/src/pidfile.jl:247
+   4808.2 ms  ✓ MacroTools
+  22928.8 ms  ✓ Parsers
+   3005.1 ms  ✓ JSON
+   1923.0 ms  ✓ Conda
+  19343.4 ms  ✓ PyCall
+  8 dependencies successfully precompiled in 51 seconds. 18 already precompiled.
+ERROR: LoadError: PyError ($(Expr(:escape, :(ccall(#= /n/home00/mdouglas/.julia/packages/PyCall/1gn3u/src/pyeval.jl:38 =# @pysym(:PyEval_EvalCode), PyPtr, (PyPtr, PyPtr, PyPtr), o, globals, locals))))) <class 'ModuleNotFoundError'>
+ModuleNotFoundError("No module named 'numpy'")
+  File "/n/home00/mdouglas/rg/ekrgilttrnr/src/GiltTNR/GiltTNR2D_essentials.py", line 1, in <module>
+    from GiltTNR2D_Ising_benchmarks import get_initial_tensor, get_initial_tensor_aniso, get_A_spectrum, get_A_spectrum_flipped, get_A_spectrum_no_norm
+  File "/n/home00/mdouglas/rg/ekrgilttrnr/src/GiltTNR/GiltTNR2D_Ising_benchmarks.py", line 1, in <module>
+    import numpy as np
+
+Stacktrace:
+  [1] pyerr_check(msg::String, val::Nothing)
+    @ PyCall ~/.julia/packages/PyCall/1gn3u/src/exception.jl:75
+  [2] pyerr_check(msg::String)
+    @ PyCall ~/.julia/packages/PyCall/1gn3u/src/exception.jl:79
+  [3] _handle_error(msg::String)
+    @ PyCall ~/.julia/packages/PyCall/1gn3u/src/exception.jl:96
+  [4] macro expansion
+    @ ~/.julia/packages/PyCall/1gn3u/src/exception.jl:110 [inlined]
+  [5] #pyeval_##0
+    @ ~/.julia/packages/PyCall/1gn3u/src/pyeval.jl:38 [inlined]
+  [6] disable_sigint
+    @ ./c.jl:167 [inlined]
+  [7] pyeval_(s::String, globals::PyDict{String, PyObject, true}, locals::PyDict{String, PyObject, true}, input_type::Int64, fname::String)
+    @ PyCall ~/.julia/packages/PyCall/1gn3u/src/pyeval.jl:37
+  [8] top-level scope
+    @ ~/rg/ekrgilttrnr/src/Tools.jl:252
+  [9] include(mapexpr::Function, mod::Module, _path::String)
+    @ Base ./Base.jl:307
+ [10] top-level scope
+    @ ~/rg/ekrgilttrnr/scripts/eigensystem.jl:31
+ [11] include(mod::Module, _path::String)
+    @ Base ./Base.jl:306
+ [12] exec_options(opts::Base.JLOptions)
+    @ Base ./client.jl:317
+ [13] _start()
+    @ Base ./client.jl:550
+in expression starting at /n/home00/mdouglas/rg/ekrgilttrnr/src/Tools.jl:37
+in expression starting at /n/home00/mdouglas/rg/ekrgilttrnr/scripts/eigensystem.jl:31

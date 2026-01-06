@@ -1,0 +1,23 @@
+==========================================
+Job ID: 53919352
+Job Name: ising_eigen
+Node: holy7c24203
+Config: default
+Started: Thu Jan  1 22:47:58 EST 2026
+==========================================
+Working directory: /n/home00/mdouglas/rg
+Julia version:
+julia version 1.12.3
+Using config: ekrgilttrnr/configs/eigensystem/default.toml
+
+==========================================
+Starting eigensystem.jl...
+==========================================
+[INFO] Using config: default
+[INFO] Logging to ekrgilttrnr/logs/eigensystem/default.log
+
+==========================================
+Finished: Thu Jan  1 22:48:55 EST 2026
+Exit code: 1
+==========================================
+WARNING: Output file not found: ekrgilttrnr/data/eigensystem/default.data

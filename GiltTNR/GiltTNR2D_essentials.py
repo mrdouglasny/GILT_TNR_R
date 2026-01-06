@@ -109,7 +109,7 @@ def gilttnr_step(A, log_fact, pars, **kwargs):
 # # # # # # # # # # # # # # # # # # TRG # # # # # # # # # # # # # # # # # # #
 
 def trg(A1, A2, log_fact, pars, **kwargs):
-    """
+    r"""
     Apply the TRG algorithm to a checker-board lattice of tensors A1 and
     A2:
                   |                          |               \      /

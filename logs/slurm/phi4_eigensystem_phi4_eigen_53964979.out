@@ -1,0 +1,30 @@
+==========================================
+Job ID: 53964979
+Job Name: phi4_eigen
+Node: holy7c24501
+Config: mu_115
+Started: Fri Jan  2 10:34:54 EST 2026
+==========================================
+Working directory: /n/home00/mdouglas/rg
+Julia version:
+julia version 1.12.3
+Using config: ekrgilttrnr/configs/phi4_eigensystem/mu_115.toml
+
+==========================================
+Starting phi4_eigensystem.jl...
+==========================================
+Testing φ⁴ tensor construction...
+Tensor shape: (8, 8, 8, 8)
+Top 5 singular values: [1.           0.9997110231 0.1924487665 0.1892659516 0.0514261677]
+
+Testing Z2 tensor construction...
+Z2 tensor created successfully
+Z2 tensor shape: [[4, 4], [4, 4], [4, 4], [4, 4]]
+[INFO] Using config: mu_115
+[INFO] Logging to ekrgilttrnr/logs/phi4_eigensystem/mu_115.log
+
+==========================================
+Finished: Fri Jan  2 10:35:33 EST 2026
+Exit code: 1
+==========================================
+WARNING: Output file not found: ekrgilttrnr/data/phi4_eigensystem/mu_115.data
