@@ -1993,8 +1993,8 @@ class AbelianTensor(TensorCommon):
             zip(self.qhape[1], self.shape[1])
         )
 
-        S_dtype = np.float64 if hermitian else np.complex_
-        U_dtype = self.dtype if hermitian else np.complex_
+        S_dtype = np.float64 if hermitian else np.complex128
+        U_dtype = self.dtype if hermitian else np.complex128
 
         # Eigenvalue decompose each sector at a time.
         # While doing so, also keep track of a list of all eigenvalues, as well

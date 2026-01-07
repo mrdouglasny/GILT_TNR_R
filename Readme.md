@@ -15,21 +15,30 @@ This subproject contains the Gilt-TNR implementation from Ebel, Kennedy, and Ryc
 ### 2D Ising Model
 The original implementation. Critical exponents extracted via Newton method.
 
-### 2D φ⁴ Theory (NEW)
+### 2D φ⁴ Theory
 Lattice scalar field theory with Z₂ symmetry. Same universality class as Ising (c=1/2 CFT).
 
 Action: S = Σ_x [½(∂φ)² + ½μ²φ² + ¼λφ⁴]
 
+### 3-State Potts Model
+q=3 Potts model with Z₃/S₃ symmetry. c=4/5 CFT.
+
+**Status:** Basic tensor construction working, scaling dimensions extractable.
+
+**Key finding:** Must use **plain tensors** (not TensorZ3) with Gilt-TNR. The per-sector truncation in TensorZ3 causes numerical instability. See `potts3/VERIFICATION.md` for details.
+
 ## Key Results
 
-Comparison of scaling dimensions (exponents) $\Delta$ obtained from deriving the transfer matrix spectrum.
+Comparison of scaling dimensions (exponents) x obtained from transfer matrix spectrum.
 
-| Operator | Ising (Exact) | φ⁴ (This Work) |
-|----------|---------------|----------------|
-| Magnetization ($\sigma$) | 0.125 | 0.152 |
-| Energy ($\epsilon$) | 1.000 | 0.998 |
+| Operator | Ising (Exact) | φ⁴ (This Work) | Potts (CFT) | Potts (χ=30) |
+|----------|---------------|----------------|-------------|--------------|
+| Spin ($\sigma$) | 0.125 | 0.152 | 0.133 | 0.136 |
+| Energy ($\epsilon$) | 1.000 | 0.998 | 0.800 | 0.812 |
 
-Values for φ⁴ were computed at RG step 5 with $\chi=32$ (see `docs/phi4_results.pdf`).
+**Ising/φ⁴:** Values computed at RG step 5 with χ=32 (see `docs/phi4_results.pdf`).
+
+**3-State Potts:** Values computed at RG step 5 with χ=30, gilt_eps=3×10⁻⁵. See arXiv:2408.10312 for optimal parameters.
 
 ## Directory Structure
 
