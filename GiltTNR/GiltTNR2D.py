@@ -126,8 +126,10 @@ def trg(A1, A2, log_fact, pars, **kwargs):
     # U*sqrt(S) and B2 = sqrt(S)V.
     # Use a truncated SVD, where the error threshold pars["cg_eps"] and
     # allowed bond dimensions to truncate to pars["cg_chis"].
+    balanced_sectors = pars.get("balanced_sectors", False)
     B1, B2, err = A1.split([0,1], [2,3], chis=pars["cg_chis"],
-                           eps=pars["cg_eps"], return_rel_err=True)
+                           eps=pars["cg_eps"], return_rel_err=True,
+                           balanced_sectors=balanced_sectors)
     if verbose:
         chi = type(B1).flatten_dim(B1.shape[2])
         status_print("TRG splitting, done.",
@@ -138,7 +140,8 @@ def trg(A1, A2, log_fact, pars, **kwargs):
         status_print("TRG splitting,")
     # Split A2 like A1 was split, but along a different diagonal.
     C1, C2, err = A2.split([2,1], [0,3], chis=pars["cg_chis"],
-                           eps=pars["cg_eps"], return_rel_err=True)
+                           eps=pars["cg_eps"], return_rel_err=True,
+                           balanced_sectors=balanced_sectors)
     if verbose:
         chi = type(C1).flatten_dim(C1.shape[2])
         status_print("TRG splitting, done.",

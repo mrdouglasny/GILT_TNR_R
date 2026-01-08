@@ -1,0 +1,769 @@
+\documentclass{article}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{graphicx}
+\usepackage{physics}
+\usepackage{geometry}
+\usepackage{listings}
+\usepackage{xcolor}
+
+\geometry{a4paper, margin=1in}
+
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    commentstyle=\color{gray},
+    stringstyle=\color{green!50!black},
+    breaklines=true,
+    frame=single
+}
+
+\title{Per-Sector Truncation Bug in Block-Diagonal SVD}
+\author{Research Notes}
+\date{January 2026}
+
+\begin{document}
+
+\maketitle
+
+\section{Summary}
+
+This document describes a bug in the truncation algorithm used by the EKR GiltTNR library for block-diagonal (equivariant) tensors. The bug causes $\mathbb{Z}_N$ symmetric tensor operations to fail for $N \geq 3$, while working correctly for $\mathbb{Z}_2$ (Ising model).
+
+\textbf{Location:} \texttt{tensors/abeliantensor.py}, function \texttt{\_find\_trunc\_dim}, lines 1226--1237.
+
+\textbf{Impact:} TensorZ3 + Gilt-TNR diverges after 1--2 RG steps, while TensorZ2 (Ising) works correctly.
+
+\textbf{Root cause:} The greedy allocation algorithm minimizes total truncation error but can create severe imbalance across charge sectors, causing some sectors to be entirely discarded.
+
+\section{Block-Diagonal SVD for Equivariant Tensors}
+
+\subsection{Equivariant Tensor Structure}
+
+A $\mathbb{Z}_N$ equivariant tensor $T$ decomposes into blocks labeled by charge sector $q \in \{0, 1, \ldots, N-1\}$. When reshaped as a matrix for SVD, it has block-diagonal form:
+\begin{equation}
+    M = \bigoplus_{q=0}^{N-1} M_q = \begin{pmatrix} M_0 & 0 & \cdots & 0 \\ 0 & M_1 & \cdots & 0 \\ \vdots & \vdots & \ddots & \vdots \\ 0 & 0 & \cdots & M_{N-1} \end{pmatrix}
+\end{equation}
+
+Each block $M_q$ is SVD'd independently:
+\begin{equation}
+    M_q = U_q S_q V_q^\dagger
+\end{equation}
+where $S_q = \text{diag}(\sigma_{q,1}, \sigma_{q,2}, \ldots, \sigma_{q,n_q})$ contains $n_q$ singular values.
+
+\subsection{Truncation to Bond Dimension $\chi$}
+
+Given a total bond dimension budget $\chi$, we must allocate dimensions across sectors:
+\begin{equation}
+    \sum_{q=0}^{N-1} d_q = \chi
+\end{equation}
+where $d_q$ is the number of singular values kept in sector $q$.
+
+\section{The Greedy Allocation Algorithm}
+
+The current implementation uses a greedy heap-based algorithm:
+
+\begin{lstlisting}
+# Lines 1226-1237 of abeliantensor.py
+dim_sum = 0
+while dim_sum < chi:
+    try:
+        minusabs_el_to_add, key = heapq.heappop(minusabs_next_els)
+    except IndexError:
+        break
+    dims[key] += 1
+    this_key_els = S_sects[key][0]
+    if dims[key] < len(this_key_els):
+        next_el = this_key_els[dims[key]]
+        heapq.heappush(minusabs_next_els, (-np.abs(next_el), key))
+    dim_sum += 1
+\end{lstlisting}
+
+This algorithm:
+\begin{enumerate}
+    \item Maintains a min-heap of (negative) singular values across all sectors
+    \item Repeatedly pops the largest singular value and increments that sector's dimension
+    \item Continues until $\chi$ dimensions are allocated
+\end{enumerate}
+
+\subsection{Optimality for Total Error}
+
+The greedy algorithm \textbf{minimizes the total truncation error}:
+\begin{equation}
+    \varepsilon_{\text{total}} = \sum_{q=0}^{N-1} \varepsilon_q = \sum_{q=0}^{N-1} \sum_{i > d_q} \sigma_{q,i}^2
+\end{equation}
+
+By always picking the largest available singular value, we discard the smallest values, minimizing $\varepsilon_{\text{total}}$.
+
+\section{The Problem: Sector Imbalance}
+
+While minimizing total error, the algorithm can create \textbf{severe imbalance} between sectors.
+
+\subsection{Pathological Example}
+
+Consider $\mathbb{Z}_3$ with $\chi = 6$ and singular values:
+\begin{align}
+    \text{Sector } q=0: & \quad S_0 = [2.0, 1.8, 1.5] \quad (n_0 = 3) \\
+    \text{Sector } q=1: & \quad S_1 = [1.9, 1.7, 1.4] \quad (n_1 = 3) \\
+    \text{Sector } q=2: & \quad S_2 = [0.5, 0.3, 0.1] \quad (n_2 = 3)
+\end{align}
+
+\textbf{Greedy allocation:}
+The 6 largest singular values globally are: $2.0, 1.9, 1.8, 1.7, 1.5, 1.4$.
+\begin{itemize}
+    \item Sector $q=0$: keeps all 3, $d_0 = 3$
+    \item Sector $q=1$: keeps all 3, $d_1 = 3$
+    \item Sector $q=2$: keeps 0, $d_2 = 0$
+\end{itemize}
+
+\textbf{Result:} Sector $q=2$ is \textbf{completely discarded}. The tensor loses charge $q=2$ entirely.
+
+\subsection{Per-Sector Truncation Errors}
+
+The individual sector errors are:
+\begin{align}
+    \varepsilon_0 &= 0 \\
+    \varepsilon_1 &= 0 \\
+    \varepsilon_2 &= 0.25 + 0.09 + 0.01 = 0.35 \quad (\text{100\% relative error})
+\end{align}
+
+\section{Why This Breaks Renormalization Group Flow}
+
+\subsection{Critical Point Behavior}
+
+At a critical point (CFT fixed point), all charge sectors should flow together under RG---this is \textbf{scale invariance}. If one sector is truncated more aggressively:
+\begin{itemize}
+    \item That sector's effective correlation length is artificially shortened
+    \item The ``critical point'' depends on which sector we examine
+    \item The tensor drifts away from the true CFT fixed point
+\end{itemize}
+
+\subsection{Error Accumulation}
+
+In Gilt-TNR, each RG step involves:
+\begin{enumerate}
+    \item GILT filtering (uses truncated SVD)
+    \item Coarse-graining contractions
+    \item SVD truncation again
+\end{enumerate}
+
+If sector $q=2$ is severely truncated:
+\begin{itemize}
+    \item The GILT filter for that sector is inaccurate
+    \item Contractions involving $q=2$ are dominated by truncation error
+    \item Error accumulates geometrically: $\delta_n \sim c^n \delta_1$
+\end{itemize}
+
+After 5--6 RG steps, the tensor no longer resembles an equivariant structure, and the flow diverges from the CFT fixed point.
+
+\subsection{Why $\mathbb{Z}_2$ Works but $\mathbb{Z}_3$ Fails}
+
+\textbf{$\mathbb{Z}_2$ (Ising):}
+\begin{itemize}
+    \item Only 2 sectors (even/odd)
+    \item Imbalance bounded: allocation can differ by at most $\chi/2$
+    \item Ising tensor has larger singular value gaps ($\sigma_1/\sigma_2 \approx 1.39$)
+    \item Error accumulation is slow
+\end{itemize}
+
+\textbf{$\mathbb{Z}_3$ (Potts):}
+\begin{itemize}
+    \item 3 sectors ($q=0,1,2$)
+    \item One sector can be entirely discarded while others are full
+    \item Potts tensor has nearly degenerate singular values ($\sigma_1/\sigma_2 \approx 1.14$)
+    \item Error accumulation is fast
+    \item Critical point measurement becomes unstable after $\sim$5 steps
+\end{itemize}
+
+\textbf{Update (Section 8):} The Z2 vs Z3 difference is now understood via GILT mode analysis. See Section~\ref{sec:z2_z3_comparison}.
+
+\section{The Fix: Balanced Sector Allocation}
+
+Instead of minimizing total error, we ensure \textbf{equal relative truncation error} across sectors:
+\begin{equation}
+    \frac{\varepsilon_q}{\|M_q\|_F^2} \approx \text{constant for all } q
+\end{equation}
+
+\subsection{Implementation: Proportional Allocation}
+
+Allocate dimensions proportionally to sector sizes:
+\begin{equation}
+    d_q = \left\lfloor \chi \cdot \frac{n_q}{\sum_{q'} n_{q'}} + 0.5 \right\rfloor
+\end{equation}
+
+with adjustment to ensure $\sum_q d_q = \chi$ exactly.
+
+\begin{lstlisting}
+# Proposed fix (balanced_sectors mode)
+if balanced_sectors:
+    total_available = sum(len(S_sects[k][0]) for k in S_sects)
+    if total_available > 0:
+        for k in S_sects:
+            sector_size = len(S_sects[k][0])
+            dims[k] = min(sector_size,
+                         max(1, round(chi * sector_size / total_available)))
+
+        # Adjust for rounding
+        dim_sum = sum(dims.values())
+        while dim_sum > chi:
+            k_max = max(dims, key=dims.get)
+            if dims[k_max] > 1:
+                dims[k_max] -= 1
+                dim_sum -= 1
+        while dim_sum < chi:
+            k_min = min(dims, key=dims.get)
+            if dims[k_min] < len(S_sects[k_min][0]):
+                dims[k_min] += 1
+                dim_sum += 1
+else:
+    # Original greedy algorithm
+    ...
+\end{lstlisting}
+
+\subsection{Alternative: Equal Relative Error Allocation}
+
+A more sophisticated approach allocates dimensions to achieve equal relative error:
+\begin{equation}
+    \varepsilon_q^{\text{rel}} = \frac{\sum_{i > d_q} \sigma_{q,i}^2}{\sum_i \sigma_{q,i}^2} \leq \varepsilon_{\text{target}}
+\end{equation}
+
+This requires binary search to find the achievable $\varepsilon_{\text{target}}$ for given $\chi$.
+
+\section{Implementation Status}
+
+The fix has been implemented in \texttt{abeliantensor.py} with a new \texttt{balanced\_sectors} parameter:
+
+\begin{itemize}
+    \item \texttt{\_find\_trunc\_dim()} method: Added \texttt{balanced\_sectors=False} parameter (lines 1178--1269)
+    \item \texttt{matrix\_eig()} method: Added \texttt{balanced\_sectors=False} parameter (line 2004)
+    \item \texttt{matrix\_svd()} method: Added \texttt{balanced\_sectors=False} parameter (line 2169)
+    \item \texttt{GiltTNR2D.py}: Reads \texttt{pars["balanced\_sectors"]} for coarse-graining splits
+\end{itemize}
+
+\textbf{Usage:} To enable balanced sector allocation, set \texttt{pars["balanced\_sectors"] = True}. The default (\texttt{False}) preserves backward compatibility with the original greedy algorithm.
+
+\section{Test Results (January 2026)}
+
+Contrary to expectations, the balanced allocation fix did \textbf{not} improve TensorZ3 stability:
+
+\begin{center}
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Method} & \textbf{$x_\varepsilon$ (step 6)} & \textbf{Error} \\
+\hline
+Plain tensor & 0.9915 & 24\% \\
+Z3 Greedy (original) & 2.3507 & 194\% \\
+Z3 Balanced (fix) & 2.7640 & 246\% \\
+\hline
+\end{tabular}
+\end{center}
+
+The CFT target is $x_\varepsilon = 0.8$.
+
+\subsection{Analysis of Failure}
+
+The balanced allocation fix made things \textit{worse}, not better. Investigation revealed:
+\begin{enumerate}
+    \item Sector dimensions were already reasonably balanced in the greedy case: e.g., $[5, 5, 6]$ vs $[6, 5, 5]$.
+    \item The divergence begins at step 2 regardless of truncation strategy.
+    \item The root cause of TensorZ3 instability lies elsewhere---possibly in:
+    \begin{itemize}
+        \item GILT environment computation for equivariant tensors
+        \item The interaction of block-diagonal structure with GILT trace optimization
+        \item Numerical precision issues in small Z3 blocks
+    \end{itemize}
+\end{enumerate}
+
+\subsection{Conclusion}
+
+The per-sector truncation imbalance hypothesis was \textbf{incorrect}. While the analysis in this document correctly identifies a potential issue with greedy allocation, empirical testing shows this is not the primary cause of TensorZ3+GILT-TNR instability for the 3-state Potts model.
+
+\section{Actual Root Cause: GILT Trace Computation in Charge Basis}
+
+Further investigation revealed the \textbf{actual root cause}: the GILT algorithm's trace-based mode identification behaves differently for block-diagonal (equivariant) tensors.
+
+\subsection{GILT Mode Identification}
+
+The GILT algorithm identifies ``CDL modes'' (corner double-line modes that can be truncated) by computing:
+\begin{equation}
+    t_i = \text{Tr}(U_i) = \sum_a U^{(i)}_{aa}
+\end{equation}
+where $U_i$ is the $i$-th singular vector of the environment tensor, reshaped as a $\chi \times \chi$ matrix.
+
+\textbf{Key insight:} A mode with $|t_i| \approx \sqrt{\chi}$ (the maximum possible trace) corresponds to an ``identity-like'' operator that can be absorbed into the corner tensor without loss of information.
+
+\subsection{The Problem: Block-Diagonal Structure}
+
+For plain tensors, $U$ is a dense matrix. For Z3 equivariant tensors, $U$ is \textbf{block-diagonal}:
+\begin{equation}
+    U^{(i)} = \begin{pmatrix} U^{(i)}_0 & 0 & 0 \\ 0 & U^{(i)}_1 & 0 \\ 0 & 0 & U^{(i)}_2 \end{pmatrix}
+\end{equation}
+
+\subsubsection{Observed Behavior}
+
+Numerical experiments (\texttt{scripts/debug\_gilt\_U\_structure.py}) show:
+
+\textbf{Plain tensor} $U^{(0)}$:
+\begin{equation}
+    U^{(0)}_{\text{plain}} = \begin{pmatrix} 0.405 & 0.291 & 0.291 \\ 0.291 & 0.405 & 0.291 \\ 0.291 & 0.291 & 0.405 \end{pmatrix}
+\end{equation}
+This is a \textit{full symmetric matrix}. The trace $t_0 = 3 \times 0.405 = 1.21$.
+
+\textbf{Z3 tensor} $U^{(0)}$:
+\begin{equation}
+    U^{(0)}_{\text{Z3}} = \begin{pmatrix} 0.987 & 0 & 0 \\ 0 & 0.114 & 0 \\ 0 & 0 & 0.114 \end{pmatrix}
+\end{equation}
+This is \textit{diagonal} (block-diagonal with $1 \times 1$ blocks). The trace $t_0 = 0.987 + 0.114 + 0.114 = 1.21$.
+
+The traces are identical! But the \textit{structure} is completely different.
+
+\subsection{Spurious Identity-Like Modes}
+
+After one RG step, the Z3 tensor develops \textbf{additional modes} that appear identity-like:
+
+\begin{center}
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Mode} & \textbf{Plain $|t_i|$} & \textbf{Z3 $|t_i|$} & \textbf{Comment} \\
+\hline
+0 & 1.27 & 1.27 & Same (leading CDL mode) \\
+1 & 0.00 & 1.24 & \textbf{Spurious in Z3} \\
+4 & 0.00 & 0.54 & \textbf{Spurious in Z3} \\
+5 & 1.19 & 0.00 & Present in plain, not Z3 \\
+6 & 0.00 & 0.12 & \textbf{Spurious in Z3} \\
+\hline
+\end{tabular}
+\end{center}
+
+\subsection{Trace Distribution Analysis (Step 2)}
+
+After two RG steps, the difference becomes even more pronounced. Analysis from \texttt{scripts/compare\_trace\_distributions.py}:
+
+\begin{center}
+\begin{tabular}{|c|c|c|}
+\hline
+\textbf{Trace Bin} & \textbf{Plain Modes} & \textbf{Z3 Modes} \\
+\hline
+$[0.00, 0.01)$ & 229 & 170 \\
+$[0.01, 0.10)$ & 3 & 19 \\
+$[0.10, 0.30)$ & 7 & \textbf{42} \\
+$[0.30, 0.50)$ & 12 & 8 \\
+$[0.50, 0.70)$ & 0 & 3 \\
+$[0.70, 1.00)$ & 2 & 12 \\
+$[1.00, 1.50)$ & 3 & 2 \\
+\hline
+\textbf{Total with $|t|>0.1$} & 24 & \textbf{67} \\
+\hline
+\end{tabular}
+\end{center}
+
+\textbf{Critical observation:} Z3 has nearly $3\times$ more modes with significant trace magnitude. These are all candidates for GILT filtering.
+
+\subsubsection{Per-Mode Comparison (Top Singular Values)}
+
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+\textbf{Mode} & $S_{\text{plain}}$ & $S_{\text{Z3}}$ & $|t|_{\text{plain}}$ & $|t|_{\text{Z3}}$ \\
+\hline
+0 & 1.0000 & 1.0000 & 1.34 & 1.03 \\
+1 & 0.7234 & 0.3474 & \textbf{0.00} & \textbf{0.66} \\
+2 & 0.7234 & 0.3444 & \textbf{0.00} & \textbf{1.21} \\
+3 & 0.3446 & 0.3403 & 0.14 & 0.03 \\
+\hline
+\end{tabular}
+\end{center}
+
+Modes 1--2 have \textit{zero} trace in plain (off-diagonal contributions cancel) but \textit{non-zero} trace in Z3 (block structure prevents cancellation). Since these modes have large singular values, they receive high GILT weight and are incorrectly filtered.
+
+\subsection{Why This Causes Divergence}
+
+The GILT filter $R'$ is constructed from modes with significant $|t_i|$:
+\begin{equation}
+    R' = I - \sum_i w_i \frac{t_i}{|t_i|} U_i
+\end{equation}
+where $w_i = \frac{(S_i/\varepsilon)^2}{1 + (S_i/\varepsilon)^2}$ is a sigmoid weight.
+
+\textbf{For plain tensors:} Only modes 0 and 5 contribute significantly.
+
+\textbf{For Z3 tensors:} Modes 0, 1, 4, and 6 all contribute.
+
+The extra modes in Z3 represent \textit{physically meaningful correlations} that are incorrectly identified as CDL modes due to the block-diagonal structure. Filtering them out removes real physics, causing the RG flow to diverge.
+
+\subsection{Mathematical Explanation}
+
+In the spin basis, a ``uniform'' mode has the form:
+\begin{equation}
+    U_{\text{uniform}} \propto \begin{pmatrix} 1 & 1 & 1 \\ 1 & 1 & 1 \\ 1 & 1 & 1 \end{pmatrix}
+\end{equation}
+
+Under DFT to the charge basis:
+\begin{equation}
+    U_{\text{charge}} = F U_{\text{spin}} F^\dagger
+\end{equation}
+where $F_{jk} = \omega^{jk}/\sqrt{3}$ with $\omega = e^{2\pi i/3}$.
+
+The key issue: \textbf{degenerate eigenvalues split} when the symmetry constraint is imposed. What was a single mode in the spin basis becomes multiple modes in the charge basis, each with non-zero trace.
+
+\subsection{Potential Solutions}
+
+\begin{enumerate}
+    \item \textbf{Basis transformation before GILT:} Apply GILT in the spin basis, not the charge basis
+    \item \textbf{Modified trace criterion:} Account for block-diagonal structure when identifying CDL modes
+    \item \textbf{Sector-aware GILT:} Apply GILT separately to each charge sector
+    \item \textbf{Use plain tensors:} Forgo explicit Z3 equivariance (current workaround)
+\end{enumerate}
+
+\subsection{Conclusion (Updated)}
+
+The TensorZ3 + GILT-TNR instability is caused by the \textbf{GILT trace-based mode identification} treating block-diagonal matrices differently than dense matrices. The block-diagonal constraint causes eigenvalue degeneracies to split, creating spurious ``identity-like'' modes that get incorrectly filtered. This is a fundamental algorithmic issue, not a numerical precision or truncation allocation problem.
+
+\section{Z2 vs Z3: Why Does Z2 Work?}
+\label{sec:z2_z3_comparison}
+
+Direct comparison between $\mathbb{Z}_2$ (Ising) and $\mathbb{Z}_3$ (Potts) GILT behavior reveals the key difference (\texttt{scripts/compare\_z2\_z3\_gilt.py}):
+
+\begin{center}
+\begin{tabular}{|l|c|c|c|c|}
+\hline
+\textbf{Model} & \textbf{Plain} & \textbf{Symmetric} & \textbf{Ratio} & \textbf{Outcome} \\
+\hline
+Ising ($\mathbb{Z}_2$) & 46 & 46 & 1.00 & Works \\
+Potts ($\mathbb{Z}_3$) & 24 & 67 & 2.79 & Fails \\
+\hline
+\end{tabular}
+\end{center}
+
+The ``Modes'' column counts modes with $|t_i| > 0.1$ (candidates for GILT filtering).
+
+\subsection{Why the Difference?}
+
+The key is understanding how the \textbf{charge constraint} affects which matrix elements of $U$ are non-zero, and how this interacts with the trace.
+
+\textbf{$\mathbb{Z}_2$ (Ising):}
+\begin{itemize}
+    \item Two sectors: even ($q=0$) and odd ($q=1$)
+    \item A $\mathbb{Z}_2$-equivariant matrix $U$ has $U_{ij} = 0$ when $q_i \neq q_j$
+    \item This gives $2 \times 2$ block-diagonal structure
+    \item The DFT is the \textbf{real} Hadamard matrix---no complex phases
+    \item Modes that have zero trace in spin basis also have zero trace in charge basis
+\end{itemize}
+
+\textbf{$\mathbb{Z}_3$ (Potts):}
+\begin{itemize}
+    \item Three sectors: $q = 0, 1, 2$
+    \item A $\mathbb{Z}_3$-equivariant matrix $U$ has $U_{ij} = 0$ when $q_i \neq q_j$
+    \item This gives $3 \times 3$ block-diagonal structure
+    \item The DFT has \textbf{complex} phases $\omega = e^{2\pi i/3}$
+    \item A mode with $\text{Tr}(U_{\text{spin}}) = 0$ can have $\text{Tr}(U_{\text{charge}}) \neq 0$ due to the constraint
+\end{itemize}
+
+\textbf{Important clarification:} The trace $\text{Tr}(U)$ is invariant under similarity transforms ($\text{Tr}(F^\dagger U F) = \text{Tr}(U)$). The issue is not that traces change under DFT, but that the \textbf{charge constraint creates different modes} than in the unconstrained case. The block-diagonal structure means certain configurations that would have zero trace in a dense matrix now have non-zero trace because off-diagonal elements are forced to zero.
+
+\subsection{Mathematical Mechanism}
+
+For $\mathbb{Z}_2$, the Fourier transform is the Hadamard matrix:
+\begin{equation}
+F_2 = \frac{1}{\sqrt{2}} \begin{pmatrix} 1 & 1 \\ 1 & -1 \end{pmatrix}
+\end{equation}
+All entries are \textbf{real} ($\pm 1$). When we impose $\mathbb{Z}_2$ equivariance (block-diagonal in charge basis), the set of allowed matrices is mapped to itself under the real DFT. Modes with zero trace in the unconstrained space still have zero trace in the constrained space.
+
+For $\mathbb{Z}_3$, the Fourier transform is:
+\begin{equation}
+F_3 = \frac{1}{\sqrt{3}} \begin{pmatrix} 1 & 1 & 1 \\ 1 & \omega & \omega^2 \\ 1 & \omega^2 & \omega \end{pmatrix}
+\end{equation}
+where $\omega = e^{2\pi i/3}$. The \textbf{complex phases} mean that the set of $\mathbb{Z}_3$-equivariant matrices in charge basis does not correspond simply to the set of ``block-structured'' matrices in spin basis.
+
+Consider a spin-basis mode:
+\begin{equation}
+U_{\text{spin}} = \begin{pmatrix} 0 & 1 & 0 \\ 1 & 0 & 0 \\ 0 & 0 & 0 \end{pmatrix}, \quad \text{Tr}(U_{\text{spin}}) = 0
+\end{equation}
+
+Under DFT this becomes $U_{\text{charge}} = F_3 U_{\text{spin}} F_3^\dagger$, which is \textbf{not} block-diagonal. When we project onto $\mathbb{Z}_3$-equivariant matrices (keep only diagonal blocks), we get a \textit{different} matrix with potentially non-zero trace.
+
+The key insight: GILT computes traces of the actual SVD modes of the equivariant tensor. These modes are constrained to be block-diagonal. The constraint itself changes which modes exist and their trace values.
+
+\subsection{Implications}
+
+This analysis confirms:
+\begin{enumerate}
+    \item The issue is \textbf{specific to $\mathbb{Z}_N$ with $N \geq 3$}
+    \item The cause is \textbf{not numerical} but \textbf{algorithmic}---the trace criterion is basis-dependent
+    \item Any fix must account for this basis dependence
+\end{enumerate}
+
+\section{Proposed Fix: GILT in Spin Basis via Per-Sector DFT}
+\label{sec:spin_basis_fix}
+
+The root cause of TensorZ3 + GILT instability is that the trace-based CDL mode identification gives different results in charge basis vs spin basis. Since GILT works correctly in spin basis, the fix is to:
+\begin{enumerate}
+    \item Transform the tensor to spin basis
+    \item Apply GILT
+    \item Transform back to charge basis
+\end{enumerate}
+
+\subsection{The Transformation}
+
+For a $\mathbb{Z}_3$ equivariant tensor, the charge basis and spin basis are related by the discrete Fourier transform (DFT):
+\begin{equation}
+    F_{jk} = \frac{\omega^{jk}}{\sqrt{3}}, \quad \omega = e^{2\pi i/3}
+\end{equation}
+
+For the initial tensor with bond dimension $\chi = 3$, each index takes values $q \in \{0, 1, 2\}$ (the charge). The transformation is:
+\begin{equation}
+    T_{\text{spin}}[s_0, s_1, s_2, s_3] = \sum_{q_0, q_1, q_2, q_3} F^\dagger_{s_0 q_0} F^\dagger_{s_1 q_1} F_{s_2 q_2} F_{s_3 q_3} \, T_{\text{charge}}[q_0, q_1, q_2, q_3]
+\end{equation}
+where we use $F^\dagger$ on incoming legs (0, 1) and $F$ on outgoing legs (2, 3) following the tensor network convention.
+
+\subsection{For Larger Bond Dimensions}
+
+After TRG coarse-graining, the bond dimension increases to $\chi > 3$. The tensor has block structure:
+\begin{itemize}
+    \item Each charge sector $q$ has dimension $n_q$
+    \item Total dimension: $\chi = n_0 + n_1 + n_2$
+    \item Indices are organized as: $[\text{charge 0 block}, \text{charge 1 block}, \text{charge 2 block}]$
+\end{itemize}
+
+The key insight is that \textbf{each charge sector independently transforms to spin basis}. Within sector $q$, there are $n_q$ basis states. Each basis state gets tensored with the DFT:
+\begin{equation}
+    |s, \alpha\rangle_{\text{spin}} = \sum_{q=0}^{2} F^\dagger_{sq} |q, \alpha\rangle_{\text{charge}}
+\end{equation}
+where $\alpha = 1, \ldots, n_q$ labels basis states within sector $q$.
+
+\subsubsection{The Transformation Matrix}
+
+For balanced sectors with $n_0 = n_1 = n_2 = n$ (so $\chi = 3n$), the transformation matrix $U$ has the block structure:
+\begin{equation}
+    U = F^\dagger \otimes I_n
+\end{equation}
+where $I_n$ is the $n \times n$ identity matrix. Explicitly:
+\begin{equation}
+    U_{(t,k),(q,k')} = F^\dagger_{tq} \delta_{kk'}
+\end{equation}
+where $(t, k)$ labels spin $t$ with multiplicity $k$, and $(q, k')$ labels charge $q$ with multiplicity $k'$.
+
+For unbalanced sectors, we use the minimum multiplicity $n_{\min} = \min(n_0, n_1, n_2)$ and construct $U$ similarly:
+\begin{equation}
+    U_{(t \cdot n_{\min} + k), (q \cdot n_q + k)} = F^\dagger_{tq} \quad \text{for } k < n_{\min}
+\end{equation}
+with remaining indices handled appropriately.
+
+\subsection{The Algorithm}
+
+\begin{enumerate}
+    \item \textbf{Extract sector dimensions:} From TensorZ3, get $(n_0, n_1, n_2)$ for each leg
+    \item \textbf{Build transformation matrix:} Construct $U = F^\dagger \otimes I_n$ (or variant for unequal sectors)
+    \item \textbf{Transform to spin basis:}
+    \begin{equation}
+        T_{\text{spin}} = U \cdot U \cdot T_{\text{charge}} \cdot U^\dagger \cdot U^\dagger
+    \end{equation}
+    (applying $U$ to incoming legs, $U^\dagger$ to outgoing legs)
+    \item \textbf{Apply GILT:} Use standard GILT on the plain spin-basis tensor
+    \item \textbf{Transform back:}
+    \begin{equation}
+        T_{\text{charge}} = U^\dagger \cdot U^\dagger \cdot T_{\text{spin}} \cdot U \cdot U
+    \end{equation}
+    \item \textbf{Reconstruct TensorZ3:} Convert the result back to block-diagonal form
+\end{enumerate}
+
+\subsection{Why This Works}
+
+\begin{itemize}
+    \item In spin basis, the tensor is a plain (dense) tensor
+    \item GILT's trace criterion correctly identifies CDL modes
+    \item The transformation is unitary, so it preserves singular values
+    \item After GILT, transforming back gives a properly filtered equivariant tensor
+\end{itemize}
+
+\subsection{Dimension Considerations}
+
+The spin-basis tensor has the same total dimension $\chi$ as the charge-basis tensor. The SVD truncation in GILT and TRG ensures that dimensions don't grow. The only overhead is the DFT transformation, which is $O(\chi^4)$ for a 4-leg tensor---negligible compared to the $O(\chi^6)$ SVD operations.
+
+\subsection{Charge Conjugation}
+
+An additional structure to exploit: in $\mathbb{Z}_3$, charges $q=1$ and $q=2$ are conjugates (since $2 \equiv -1 \mod 3$). This means:
+\begin{equation}
+    T_{q=2} = T_{q=1}^* \quad \text{(complex conjugate)}
+\end{equation}
+for Hermitian tensors. This can be used to reduce computation and ensure consistency.
+
+\section{Implementation and Verification (January 2026)}
+
+The spin-basis approach has been successfully implemented and verified in \texttt{gilt\_z3\_fix.py}.
+
+\subsection{Key Implementation Details}
+
+\begin{enumerate}
+    \item \textbf{DFT Transform:} The transformation uses $F[s,q] = \omega^{sq}/\sqrt{N}$ where $\omega = e^{2\pi i/N}$.
+
+    \item \textbf{Critical dtype handling:} The DFT produces complex128 tensors, but for a real $\mathbb{Z}_3$ tensor, the imaginary part is machine epsilon ($\sim 10^{-14}$). \textbf{We must convert to float64 before TRG operations.}
+
+    This is critical because SVD of complex matrices produces fundamentally different $U$ and $V$ matrices than SVD of real matrices, even when the imaginary part is negligible. The phase ambiguity in complex SVD causes the RG flow to diverge.
+
+    \item \textbf{Why the imaginary part vanishes:} For a real tensor in charge basis, the DFT-transformed tensor satisfies $T^*(s) = T(-s \mod N)$. For the 3-state Potts model at criticality, this symmetry ensures the tensor is effectively real in spin basis.
+\end{enumerate}
+
+\subsection{Verification Results}
+
+Testing at 8 RG steps with $\chi = 24$:
+\begin{verbatim}
+Step   Plain          Z3 Fix         Ratio      log_diff
+------------------------------------------------------------
+1      2.301896e-01   2.301896e-01   1.000000   3.55e-15
+2      1.522020e-01   1.522020e-01   1.000000   1.42e-14
+...
+8      2.681416e-02   2.681416e-02   1.000000   6.40e-10
+
+Final log factors: plain=271338.245812, Z3_fix=271338.245812
+\end{verbatim}
+
+The results are numerically identical to machine precision.
+
+\subsection{Usage}
+
+\begin{lstlisting}
+from gilt_z3_fix import gilttnr_step_fixed_v3
+
+# Initialize with Z3 symmetry
+pars_z3 = {'symmetry_tensors': True, ...}
+A_z3 = get_initial_tensor_potts_relT(pars_z3)
+
+# Run RG steps with fixed GILT
+for step in range(n_steps):
+    A_z3, log = gilttnr_step_fixed_v3(A_z3, log, pars_z3)
+\end{lstlisting}
+
+The function automatically:
+\begin{itemize}
+    \item Transforms TensorZ3 to spin basis via DFT
+    \item Converts to real dtype (float64)
+    \item Applies standard GILT-TNR in spin basis
+    \item Returns result as plain tensor (subsequent steps work directly)
+\end{itemize}
+
+\section{Efficiency Considerations: Per-Link vs Full Spin Basis}
+
+\subsection{The Efficiency Question}
+
+The spin-basis fix works by transforming the entire tensor from charge basis to spin basis before applying GILT. This raises the question: can we be more efficient by only transforming the link being processed?
+
+\subsection{Why Per-Link Transformation is Subtle}
+
+Consider GILT processing the ``South'' edge. The environment tensor $E$ is constructed by contracting four corner tensors:
+\begin{equation}
+    E = SW \cdot NW \cdot NE \cdot SE
+\end{equation}
+where each corner like $SW$ is a partial trace: $SW_{ij,kl} = \sum_{a,b} A_{aikb} A^*_{ajlb}$.
+
+The trace $t = \text{Tr}(U)$ for CDL identification is computed from the eigenvectors $U$ of $E E^\dagger$. For this trace to correctly identify CDL modes, the environment must have the proper physical structure.
+
+\textbf{Key observation:} If we build $E$ from charge-basis tensors, then $E$ has block structure. Eigendecomposing $E E^\dagger$ gives $U$ in charge basis. Simply transforming $U$ to spin basis afterward does \emph{not} give the same result as building $E$ from spin-basis tensors.
+
+\subsection{Attempted Per-Link Fix (v4)}
+
+We attempted a fix that transforms only $U$ to spin basis for the trace computation:
+\begin{lstlisting}
+def optimize_Rp_spin_basis(U, S, pars, sector_dims, N=3):
+    # Transform U to spin basis
+    U_spin = np.einsum('sq,tp,qpi->sti', F, F, U_arr)
+    # Compute trace in spin basis
+    t = np.einsum('ssi->i', U_spin)
+    # ... optimize tp and build Rp in spin basis ...
+    # Transform Rp back to charge basis
+    Rp_charge = np.einsum('qs,pt,st->qp', Fdag, Fdag, Rp_spin)
+    return Rp_charge
+\end{lstlisting}
+
+\textbf{Result:} This approach fails because $U_{\text{spin}}$ has significant imaginary parts ($\sim 89\%$ of real norm). The transformed environment eigenvectors are not real because $U$ is a derived quantity from charge-basis contractions, not the original tensor.
+
+\subsection{Correct Per-Link Approach (Future Work)}
+
+For true per-link efficiency, one would need to:
+\begin{enumerate}
+    \item Transform only the two legs at the bond to spin basis on all four corner tensors
+    \item Build $E$ with these ``hybrid'' tensors (some legs in spin, others in charge basis)
+    \item Eigendecompose and compute trace
+    \item Build $R'$ in the hybrid basis
+    \item Transform $R'$ back to pure charge basis
+\end{enumerate}
+
+This is significantly more complex and may not yield substantial speedup for our use case. The current v3 approach (full spin basis) is correct and sufficiently efficient.
+
+\subsection{Efficiency of Current Approach}
+
+Benchmarks show the v3 spin-basis approach has similar timing to plain tensors:
+\begin{verbatim}
+Plain tensor:  42.2s ± 0.4s  (5 steps, chi=24, 3 trials)
+Z3 Fix (spin): 41.4s ± 1.0s
+Ratio: 0.98x
+\end{verbatim}
+
+Since the Z3 fix operates entirely in spin basis (plain tensors) after the initial DFT transformation, it achieves similar performance to plain tensor operations. The efficiency benefits of charge-basis block structure would only appear with true charge-basis TRG.
+
+\section{Additional Root Cause: Rp.split() Rotation Difference}
+\label{sec:rp_split_rotation}
+
+A further investigation (January 2026) revealed an additional mechanism by which TensorZ3 + GILT fails:
+
+\subsection{The Rp.split() Step}
+
+In the \texttt{apply\_gilt} function, after computing the filter matrix $R'$, it is split via SVD:
+\begin{lstlisting}
+Rp1, s, Rp2, spliterr = Rp.split(0, 1, eps=spliteps,
+                                  return_rel_err=True,
+                                  return_sings=True)
+\end{lstlisting}
+
+This computes $R' = R'_1 \cdot \text{diag}(s) \cdot R'_2$ via SVD of the 2-leg matrix $R'$.
+
+\subsection{The Problem: Different Rotations in Different Bases}
+
+When $R' \approx I$ (identity), the SVD gives $s \approx [1, 1, 1, \ldots]$ but the rotation matrices $R'_1$ and $R'_2$ are \textbf{not uniquely determined}.
+
+\textbf{For TensorZ3 (charge basis):}
+\begin{equation}
+    R'_{\text{Z3}} = \begin{pmatrix} 1 & 0 & 0 \\ 0 & 1 & 0 \\ 0 & 0 & 1 \end{pmatrix} \Rightarrow R'_1 = R'_2 = I
+\end{equation}
+The block-diagonal SVD preserves the identity structure.
+
+\textbf{For plain tensor (spin basis):}
+\begin{equation}
+    R'_{\text{plain}} \approx I \Rightarrow R'_1, R'_2 = \text{arbitrary rotation}
+\end{equation}
+The dense SVD of an identity matrix gives $U V^\dagger = I$ but $U$ and $V$ can be any orthogonal matrices.
+
+\textbf{Observed values:}
+\begin{align}
+    R'_1{}_{\text{Z3}} &= I_3 \\
+    R'_1{}_{\text{plain}} &= \begin{pmatrix} 0.577 & 0 & 0.816 \\ 0.577 & 0.707 & -0.408 \\ 0.577 & -0.707 & -0.408 \end{pmatrix}
+\end{align}
+
+\subsection{Consequence: Basis Drift}
+
+After applying $R'_1$ and $R'_2$ to the tensors:
+\begin{itemize}
+    \item \textbf{Singular values match} (verified: $1.04 \times 10^{-15}$ relative difference)
+    \item \textbf{Tensor values differ by 110\%} (different rotation applied)
+\end{itemize}
+
+The tensors contain the same physical information but are in different bases. In subsequent RG steps, this basis difference compounds, causing the flows to diverge.
+
+\subsection{Relation to Trace-Based Issue}
+
+This Rp.split() issue is \textit{in addition to} the trace-based CDL identification issue described in Section 7. Both contribute to TensorZ3 + GILT instability:
+\begin{enumerate}
+    \item Trace computation identifies different modes as CDL (Section 7)
+    \item Even when $R' \approx I$, the split produces different rotations (this section)
+\end{enumerate}
+
+The v3 spin-basis fix (Section 10) addresses both issues by operating entirely in spin basis.
+
+\section{References}
+
+\begin{itemize}
+    \item Ebel, Kennedy, Rychkov, arXiv:2408.10312 (Newton method for Gilt-TNR)
+    \item Hauru, Delcamp, Mizera, arXiv:1709.07460 (GILT algorithm)
+    \item Markovsky, ``Structured Low-Rank Approximation and its Applications'' (2008)
+\end{itemize}
+
+\end{document}

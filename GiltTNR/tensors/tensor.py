@@ -581,6 +581,7 @@ class Tensor(TensorCommon, np.ndarray):
         degeneracy_eps=1e-6,
         sparse=False,
         trunc_err_func=None,
+        balanced_sectors=False,  # Ignored for plain tensors (no sectors)
     ):
         """Singular value decompose a matrix.
 

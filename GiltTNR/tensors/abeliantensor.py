@@ -1175,6 +1175,7 @@ class AbelianTensor(TensorCommon):
         degeneracy_eps=1e-6,
         trunc_err_func=None,
         norm_sq=None,
+        balanced_sectors=False,
     ):
         """A utility function that is used by eigenvalue and singular value
         decompositions.
@@ -1183,6 +1184,14 @@ class AbelianTensor(TensorCommon):
         decomposition, find out what bond dimension we should truncate the
         decomposition to, how this bond dimension should be distributed, and
         what the resulting truncation error is.
+
+        Parameters
+        ----------
+        balanced_sectors : bool, optional
+            If True, allocate dimensions proportionally across charge sectors
+            instead of greedily picking largest singular values globally.
+            This prevents severe imbalance that can break Z_N equivariance
+            for N >= 3. Default is False for backward compatibility.
         """
         # First, find what the truncation dimension chi will be.
         S = -np.sort(-np.abs(S))
@@ -1222,19 +1231,58 @@ class AbelianTensor(TensorCommon):
 
         # Find out which values to keep, i.e. how to distribute chi in the
         # different blocks.
-        dim_sum = 0
-        while dim_sum < chi:
-            try:
-                minusabs_el_to_add, key = heapq.heappop(minusabs_next_els)
-            except IndexError:
-                # All the dimensions are fully included.
-                break
-            dims[key] += 1
-            this_key_els = S_sects[key][0]
-            if dims[key] < len(this_key_els):
-                next_el = this_key_els[dims[key]]
-                heapq.heappush(minusabs_next_els, (-np.abs(next_el), key))
-            dim_sum += 1
+        if balanced_sectors and len(S_sects) > 0:
+            # Proportional allocation: each sector gets chi * (n_k / sum(n_k))
+            # This ensures balanced truncation error across charge sectors,
+            # which is critical for Z_N equivariance with N >= 3.
+            total_available = sum(len(v[0]) for v in S_sects.values())
+            if total_available > 0:
+                # Compute proportional allocation
+                for k in S_sects:
+                    sector_size = len(S_sects[k][0])
+                    # Ensure at least 1 dimension per sector if possible
+                    dims[k] = min(sector_size,
+                                 max(1, round(chi * sector_size / total_available)))
+
+                # Adjust for rounding to match chi exactly
+                dim_sum = sum(dims.values())
+
+                # If we allocated too many, remove from largest sectors
+                while dim_sum > chi:
+                    # Find sector with most allocated that can be reduced
+                    reducible = {k: d for k, d in dims.items() if d > 1}
+                    if not reducible:
+                        break
+                    k_max = max(reducible, key=reducible.get)
+                    dims[k_max] -= 1
+                    dim_sum -= 1
+
+                # If we allocated too few, add to smallest sectors
+                while dim_sum < chi:
+                    # Find sector that can accept more
+                    expandable = {k: d for k, d in dims.items()
+                                 if d < len(S_sects[k][0])}
+                    if not expandable:
+                        break
+                    k_min = min(expandable, key=expandable.get)
+                    dims[k_min] += 1
+                    dim_sum += 1
+        else:
+            # Original greedy algorithm: minimizes total truncation error
+            # but can create severe imbalance between charge sectors.
+            dim_sum = 0
+            while dim_sum < chi:
+                try:
+                    minusabs_el_to_add, key = heapq.heappop(minusabs_next_els)
+                except IndexError:
+                    # All the dimensions are fully included.
+                    break
+                dims[key] += 1
+                this_key_els = S_sects[key][0]
+                if dims[key] < len(this_key_els):
+                    next_el = this_key_els[dims[key]]
+                    heapq.heappush(minusabs_next_els, (-np.abs(next_el), key))
+                dim_sum += 1
         return chi, dims, err
 
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -1953,6 +2001,7 @@ class AbelianTensor(TensorCommon):
         degeneracy_eps=1e-6,
         sparse=False,
         trunc_err_func=None,
+        balanced_sectors=False,
     ):
         """Find eigenvalues and eigenvectors of a matrix.
 
@@ -2063,6 +2112,7 @@ class AbelianTensor(TensorCommon):
             degeneracy_eps=degeneracy_eps,
             trunc_err_func=trunc_err_func,
             norm_sq=norm_sq,
+            balanced_sectors=balanced_sectors,
         )
 
         # Truncate each block and create the dim for the new index.
@@ -2117,6 +2167,7 @@ class AbelianTensor(TensorCommon):
         degeneracy_eps=1e-6,
         sparse=False,
         trunc_err_func=None,
+        balanced_sectors=False,
     ):
         """Singular value decompose a matrix.
 
@@ -2225,6 +2276,7 @@ class AbelianTensor(TensorCommon):
             degeneracy_eps=degeneracy_eps,
             trunc_err_func=trunc_err_func,
             norm_sq=norm_sq,
+            balanced_sectors=balanced_sectors,
         )
 
         # Truncate each block and create the dim for the new index.
