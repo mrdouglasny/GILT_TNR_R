@@ -13,7 +13,6 @@
 
 
 mkpath("critical_temperatures")
-mkpath("diff_tests")
 mkpath("eigensystems")
 mkpath("newton")
 mkpath("trajectories")
@@ -171,7 +170,7 @@ end
 
 
 function handle_the_database(initialA_pars, len::Int64, gilt_pars)
-	trajectories = readdir("trajectories/")
+	trajectories = readdir("ekrgilttrnr/data/trajectories/")
 	pattern = form_the_no_len_dot_data_pattern(initialA_pars, gilt_pars)
 	matching = filter(x -> occursin(pattern, x), trajectories)
 
@@ -196,7 +195,7 @@ function handle_the_database(initialA_pars, len::Int64, gilt_pars)
 			end
 		end
 		file_name = form_the_file_name(initialA_pars, existing_length, gilt_pars)
-		traj = deserialize("trajectories/" * file_name * ".data")
+		traj = deserialize("ekrgilttrnr/data/trajectories/" * file_name * ".data")
 		len = min(len, existing_length)
 		return traj["A"][1:(len+1)], traj["log_fact"][1:(len+1)], traj["errs"][1:(len+1)], existing_length
 	elseif length(matching) > 2
@@ -217,10 +216,10 @@ function trajectory(initialA_pars, len::Int64, gilt_pars)
 	file_name = form_the_file_name(initialA_pars, len, gilt_pars)
 	if existing_length != 0
 		file_name_old = form_the_file_name(initialA_pars, existing_length, gilt_pars)
-		Filesystem.mv("trajectories/" * file_name_old * ".log", "trajectories/" * file_name * ".log")
+		Filesystem.mv("ekrgilttrnr/data/trajectories/" * file_name_old * ".log", "ekrgilttrnr/data/trajectories/" * file_name * ".log")
 	end
 
-	out_log = open("trajectories/" * file_name * ".log", "a")
+	out_log = open("ekrgilttrnr/data/trajectories/" * file_name * ".log", "a")
 
 	redirect_stdio(stdout = out_log) do
 		for i ∈ (existing_length+1):len
@@ -236,9 +235,9 @@ function trajectory(initialA_pars, len::Int64, gilt_pars)
 		"log_fact" => log_fact_hist,
 		"errs" => errs_hist,
 	)
-	serialize("trajectories/" * file_name * ".data", traj)
+	serialize("ekrgilttrnr/data/trajectories/" * file_name * ".data", traj)
 	if existing_length != 0
-		Filesystem.rm("trajectories/" * file_name_old * ".data")
+		Filesystem.rm("ekrgilttrnr/data/trajectories/" * file_name_old * ".data")
 	end
 	return traj
 end

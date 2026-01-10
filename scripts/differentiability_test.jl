@@ -238,5 +238,7 @@ fig
 
 name = gilt_pars_identifier(gilt_pars)
 
-save("diff_tests/" * name * "__relT=$(relT)_step=$(number_of_initial_steps).pdf", fig)
+output_dir = joinpath("ekrgilttrnr", "data", "diff_tests")
+mkpath(output_dir)
+save(joinpath(output_dir, name * "__relT=$(relT)_step=$(number_of_initial_steps).pdf"), fig)
 
