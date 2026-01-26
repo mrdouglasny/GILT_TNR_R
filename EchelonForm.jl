@@ -1,3 +1,8 @@
+# MODULE: ekrgilttrnr/src/EchelonForm.jl
+# USAGE: Included by EKR-GILT-TNR code
+# DESCRIPTION: Row echelon form utilities for tensor decomposition.
+#              Used in gauge fixing for GILT algorithm.
+
 using LinearAlgebra
 
 

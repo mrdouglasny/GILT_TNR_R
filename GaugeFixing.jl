@@ -1,3 +1,8 @@
+# MODULE: ekrgilttrnr/src/GaugeFixing.jl
+# USAGE: Included by EKR-GILT-TNR code
+# DESCRIPTION: Gauge fixing utilities for GILT algorithm.
+#              Handles continuous and discrete gauge degrees of freedom.
+#
 # topics:
 # - PYTHON MODULES
 # - RANDOM TENSORS GENERATOR FOR TESTS AND OTHERS TEST FUNCTIONS

@@ -1,3 +1,8 @@
+# MODULE: ekrgilttrnr/src/KrylovTechnical.jl
+# USAGE: Included by EKR-GILT-TNR code
+# DESCRIPTION: KrylovKit technical utilities for tensor operations.
+#              Provides Z2 tensor structure and minimal vector operations.
+#
 # topics:
 # - PYTHON MODULES
 # - RANDOM TENSORS GENERATOR FOR TESTS

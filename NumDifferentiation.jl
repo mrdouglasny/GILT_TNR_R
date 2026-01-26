@@ -1,4 +1,7 @@
-# This module provides function df for computing numerical derivatives. 
+# MODULE: ekrgilttrnr/src/NumDifferentiation.jl
+# USAGE: using NumDifferentiation
+# DESCRIPTION: Numerical differentiation module providing df function.
+#              High-order finite difference coefficients for derivative computation.
 
 module NumDifferentiation
 

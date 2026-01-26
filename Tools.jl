@@ -1,4 +1,9 @@
-# initial_tensor
+# MODULE: ekrgilttrnr/src/Tools.jl
+# USAGE: Included by EKR-GILT-TNR code
+# DESCRIPTION: Utility functions for GILT-TNR analysis.
+#              Includes trajectory plotting, critical temperature search, and exact Ising spectrum.
+#
+# PROVENANCE: Part of EKR-GILT-TNR codebase.
 
 # topics:
 # - GENERIC PACKAGES
